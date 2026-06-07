@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@keyframes spinY {
+  from {
+    transform: rotateY(0deg);
+  }
+
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+.spin-building {
+  animation: spinY 20s linear infinite;
+  transform-style: preserve-3d;
+}
