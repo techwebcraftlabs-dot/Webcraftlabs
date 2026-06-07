@@ -1,24 +1,47 @@
-import { useState } from 'react'
+import { useState } from 'react';
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useNavigate } from 'react-router-dom';
+import { auth } from '../firebase';
 
 function Login() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
 
-    if (
-      email === 'admin@zonal.com' &&
-      password === 'zonal123'
-    ) {
+    if (!email || !password) {
+      return
+    }
 
-      localStorage.setItem('isLoggedIn', 'true')
+    try {
+      await signInWithEmailAndPassword(auth, email, password);  
+      navigate('/Dashboard');
+    } catch (error) {
+      // This is where we catch that 400 error!
+      let Message = "An error occurred. Please try again.";
+      console.log(error.code);
 
-      window.location.href = '/Dashboard'
-
-    } else {
-      alert('Invalid Credentials')
+      // Switch case to handle specific Firebase Auth errors
+      switch (error.code) {
+        case "auth/invalid-email":
+          Message = "The email address is not formatted correctly.";
+          break;
+        case "auth/user-disabled":
+          Message = "This user account has been disabled.";
+          break;
+        case "auth/user-not-found":
+        case "auth/wrong-password":
+        case "auth/invalid-credential": 
+          // Modern Firebase merges these for security, so hackers can't guess emails
+          Message = "Incorrect email or password. Please try again.";
+          break;
+        case "auth/too-many-requests":
+          Message = "Too many failed attempts. This account has been temporarily blocked. Try again later.";
+          break;
+      }
+      alert(Message);
     }
   }
 
