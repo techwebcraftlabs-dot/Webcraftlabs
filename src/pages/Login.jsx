@@ -67,7 +67,7 @@ function Login() {
           <div>
 
             <label className="text-sm text-gray-500">
-              Email
+              Emailfsfsfs
             </label>
 
             <input
