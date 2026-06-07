@@ -53,7 +53,7 @@ function Sidebar({
       },
       {
         key: 'commission',
-        label: 'Commission for Release',
+        label: 'Commission',
         icon: WalletCards,
       },
       {

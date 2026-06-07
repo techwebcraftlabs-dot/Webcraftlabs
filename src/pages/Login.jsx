@@ -44,7 +44,7 @@ function Login() {
           <div>
 
             <label className="text-sm text-gray-500">
-              Emailfsfsfs
+              Email
             </label>
 
             <input
