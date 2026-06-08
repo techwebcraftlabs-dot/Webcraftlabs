@@ -20,6 +20,8 @@ function Commission() {
   const [selectedProject, setSelectedProject] = useState('');
   const [selectedBuyerName, setSelectedBuyerName] = useState('');
   const [selectedBRSId, setSelectedBRSId] = useState('');
+  const [voucherGrossAmount, setVoucherGrossAmount] = useState('');
+  const [buyerAssignedAmount, setBuyerAssignedAmount] = useState('');
   const [voucherDate, setVoucherDate] = useState('');
   const [remarks, setRemarks] = useState('');
   const [voucherFile, setVoucherFile] = useState(null);
@@ -142,6 +144,16 @@ function Commission() {
   const handleBuyerChange = (value) => {
     setSelectedBuyerName(value);
     setSelectedBRSId('');
+    setBuyerAssignedAmount('');
+  };
+
+  const handleBRSChange = (value) => {
+    const record = brsRecords.find((item) => item.id === value);
+
+    setSelectedBRSId(value);
+    setBuyerAssignedAmount(
+      record ? String(getCommissionAmount(record) || "") : ""
+    );
   };
 
   const clearForm = () => {
@@ -149,6 +161,8 @@ function Commission() {
     setSelectedProject('');
     setSelectedBuyerName('');
     setSelectedBRSId('');
+    setVoucherGrossAmount('');
+    setBuyerAssignedAmount('');
     setVoucherDate('');
     setRemarks('');
     setVoucherFile(null);
@@ -189,6 +203,24 @@ function Commission() {
       return;
     }
 
+    const grossAmount = getNumber(voucherGrossAmount);
+    const assignedAmount = getNumber(buyerAssignedAmount);
+
+    if (!grossAmount) {
+      alert("Please enter the voucher gross commission.");
+      return;
+    }
+
+    if (!assignedAmount) {
+      alert("Please enter the buyer assigned amount.");
+      return;
+    }
+
+    if (assignedAmount > grossAmount) {
+      alert("Buyer assigned amount cannot be greater than voucher gross commission.");
+      return;
+    }
+
     try {
       setSavingVoucher(true);
 
@@ -201,8 +233,8 @@ function Commission() {
         phase: selectedRecord.phase || "",
         block: selectedRecord.block || "",
         lot: selectedRecord.lot || "",
-        amount: getRecordAmount(selectedRecord),
-        commissionAmount: getCommissionAmount(selectedRecord),
+        amount: grossAmount,
+        commissionAmount: assignedAmount,
         voucherDate,
         remarks,
         voucherFileName: voucherFile?.name || "",
@@ -438,7 +470,7 @@ function Commission() {
 
                 <select
                   value={selectedBRSId}
-                  onChange={(e) => setSelectedBRSId(e.target.value)}
+                  onChange={(e) => handleBRSChange(e.target.value)}
                   className="
                     w-full
                     border
@@ -465,18 +497,45 @@ function Commission() {
 
               </div>
 
-              {/* AMOUNT */}
+              {/* GROSS COMMISSION */}
               <div>
 
                 <label className="text-sm font-medium text-gray-600 mb-2 block">
-                  Amount
+                  Voucher Gross Commission
                 </label>
 
                 <input
                   type="text"
-                  value={selectedRecord ? getCommissionAmount(selectedRecord).toLocaleString() : ""}
-                  readOnly
-                  placeholder="Commission amount"
+                  value={voucherGrossAmount}
+                  onChange={(e) => setVoucherGrossAmount(e.target.value)}
+                  placeholder="Overall gross commission"
+                  className="
+                    w-full
+                    border
+                    border-gray-300
+                    rounded-xl
+                    px-4
+                    py-3
+                    outline-none
+                    focus:ring-2
+                    focus:ring-[#0d1b4c]
+                  "
+                />
+
+              </div>
+
+              {/* BUYER ASSIGNED AMOUNT */}
+              <div>
+
+                <label className="text-sm font-medium text-gray-600 mb-2 block">
+                  Buyer Assigned Amount
+                </label>
+
+                <input
+                  type="text"
+                  value={buyerAssignedAmount}
+                  onChange={(e) => setBuyerAssignedAmount(e.target.value)}
+                  placeholder="Amount assigned to selected buyer"
                   className="
                     w-full
                     border
@@ -732,7 +791,8 @@ function Commission() {
                 <th className="p-5">Buyer</th>
                 <th className="p-5">Project</th>
                 <th className="p-5">Phase / Block / Lot</th>
-                <th className="p-5">Amount</th>
+                <th className="p-5">Gross Commission</th>
+                <th className="p-5">Buyer Amount</th>
                 <th className="p-5">Action</th>
 
               </tr>
@@ -744,7 +804,7 @@ function Commission() {
               {voucherLoading && (
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan="7"
                     className="p-8 text-center text-gray-500"
                   >
                     Loading release records...
@@ -755,7 +815,7 @@ function Commission() {
               {!voucherLoading && filteredVoucherRecords.length === 0 && (
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan="7"
                     className="p-8 text-center text-gray-500"
                   >
                     No release records yet.
@@ -795,6 +855,10 @@ function Commission() {
                   </td>
 
                   <td className="p-5 font-bold text-[#0d1b4c]">
+                    P{getNumber(voucher.amount).toLocaleString()}
+                  </td>
+
+                  <td className="p-5 font-bold text-emerald-700">
                     P{getNumber(voucher.commissionAmount).toLocaleString()}
                   </td>
 

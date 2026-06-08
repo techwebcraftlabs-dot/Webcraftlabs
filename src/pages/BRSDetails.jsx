@@ -389,8 +389,8 @@ function BRSDetails({ setActivePage }) {
           <thead className="bg-[#f5f5f5]">
             <tr className="text-left text-gray-600">
               <th className="p-5">Date</th>
-              <th className="p-5">Amount</th>
-              <th className="p-5">Commission</th>
+              <th className="p-5">Gross Commission</th>
+              <th className="p-5">Buyer Amount</th>
               <th className="p-5">Notes</th>
             </tr>
           </thead>
