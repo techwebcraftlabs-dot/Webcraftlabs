@@ -1,30 +1,34 @@
-import { useState } from 'react'
-import {
-  ChevronDown,
-  ShieldCheck,
-} from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 function Topbar() {
 
-  const [role, setRole] = useState(
-    localStorage.getItem('role') || 'Administrator'
-  )
+  const [fullName, setFullName] =
+    useState('User')
 
-  const [open, setOpen] = useState(false)
+  const [role, setRole] =
+    useState('Agent')
 
-  const handleRoleChange = (newRole) => {
+  useEffect(() => {
 
-    setRole(newRole)
+    const storedName =
+      localStorage.getItem(
+        'fullName'
+      )
 
-    localStorage.setItem(
-      'role',
-      newRole
-    )
+    const storedRole =
+      localStorage.getItem(
+        'role'
+      )
 
-    setOpen(false)
+    if (storedName) {
+      setFullName(storedName)
+    }
 
-    window.location.reload()
-  }
+    if (storedRole) {
+      setRole(storedRole)
+    }
+
+  }, [])
 
   return (
     <div
@@ -73,148 +77,48 @@ function Topbar() {
       </div>
 
       {/* RIGHT */}
-      <div className="flex items-center gap-3 lg:gap-5">
+      <div className="flex items-center gap-3">
 
-        {/* ROLE SWITCHER */}
-        <div className="relative">
+        <div className="text-right">
 
-          <button
-            onClick={() => setOpen(!open)}
+          <h3
             className="
-              flex
-              items-center
-              gap-2
-              px-3
-              lg:px-4
-              py-2
-              lg:py-3
-              rounded-2xl
-              bg-[#f5f5f5]
-              hover:bg-[#ececec]
-              transition-all
+              font-bold
+              text-[#3b281f]
             "
           >
+            {fullName}
+          </h3>
 
-            <ShieldCheck
-              size={18}
-              className="text-[#4f5dff]"
-            />
-
-            <span
-              className="
-                font-semibold
-                text-xs
-                lg:text-sm
-                hidden
-                sm:block
-              "
-            >
-              {role}
-            </span>
-
-            <ChevronDown size={16} />
-
-          </button>
-
-          {open && (
-
-            <div
-              className="
-                absolute
-                right-0
-                top-full
-                mt-2
-                w-52
-                bg-white
-                rounded-2xl
-                shadow-2xl
-                border
-                border-gray-100
-                overflow-hidden
-                z-50
-              "
-            >
-
-              {[
-                'Administrator',
-                'Agent',
-                'Sales Director',
-                'EVP',
-              ].map((item) => (
-
-                <button
-                  key={item}
-                  onClick={() =>
-                    handleRoleChange(item)
-                  }
-                  className="
-                    w-full
-                    text-left
-                    px-5
-                    py-3
-                    hover:bg-[#f8f8f8]
-                    transition-all
-                  "
-                >
-                  {item}
-                </button>
-
-              ))}
-
-            </div>
-
-          )}
+          <p
+            className="
+              text-sm
+              text-gray-500
+            "
+          >
+            {role}
+          </p>
 
         </div>
 
-        {/* PROFILE */}
-        <div className="flex items-center gap-3">
-
-          <div className="hidden md:block text-right">
-
-            <h3
-              className="
-                font-bold
-                text-[#3b281f]
-              "
-            >
-              Zonal Admin
-            </h3>
-
-            <p
-              className="
-                text-sm
-                text-gray-500
-              "
-            >
-              {role}
-            </p>
-
-          </div>
-
-          <div
-            className="
-              w-11
-              h-11
-              lg:w-14
-              lg:h-14
-              rounded-full
-              bg-gradient-to-br
-              from-[#4f5dff]
-              to-[#6673ff]
-              flex
-              items-center
-              justify-center
-              text-white
-              font-bold
-              text-sm
-              lg:text-lg
-              shadow-lg
-            "
-          >
-            {role.charAt(0)}
-          </div>
-
+        <div
+          className="
+            w-14
+            h-14
+            rounded-full
+            bg-gradient-to-br
+            from-[#4f5dff]
+            to-[#6673ff]
+            flex
+            items-center
+            justify-center
+            text-white
+            font-bold
+            text-lg
+            shadow-lg
+          "
+        >
+          {fullName.charAt(0)}
         </div>
 
       </div>

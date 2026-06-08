@@ -1,8 +1,45 @@
 import { useNavigate } from "react-router-dom";
-import { brsRecords } from "../data/BRSData";
+import { useEffect, useState } from "react";
+import {
+  collection,
+  onSnapshot,
+} from "firebase/firestore";
+
+import { db } from "../firebase";
 
 function BRS() {
   const navigate = useNavigate();
+  const [brsRecords, setBrsRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "brs"),
+      (snapshot) => {
+        const records = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        records.sort((a, b) => {
+          const dateA = a.createdAt?.toMillis?.() || 0;
+          const dateB = b.createdAt?.toMillis?.() || 0;
+
+          return dateB - dateA;
+        });
+
+        setBrsRecords(records);
+        setLoading(false);
+      },
+      (error) => {
+        console.error(error);
+        alert(error.message);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   const statusStyles = {
     Approved:
@@ -86,10 +123,32 @@ function BRS() {
           </thead>
 
           <tbody>
-            {brsRecords.map((record) => (
+            {loading && (
+              <tr>
+                <td
+                  colSpan="8"
+                  className="p-8 text-center text-gray-500"
+                >
+                  Loading BRS records...
+                </td>
+              </tr>
+            )}
+
+            {!loading && brsRecords.length === 0 && (
+              <tr>
+                <td
+                  colSpan="8"
+                  className="p-8 text-center text-gray-500"
+                >
+                  No BRS records yet.
+                </td>
+              </tr>
+            )}
+
+            {!loading && brsRecords.map((record) => (
               <tr
-                key={record.brsId}
-                onClick={() => navigate("/brs-details")}
+                key={record.id}
+                onClick={() => navigate(`/brs-details/${record.id}`)}
                 className="
                   border-t
                   hover:bg-[#fafafa]
@@ -102,11 +161,11 @@ function BRS() {
                 </td>
 
                 <td className="text-gray-600">
-                  {record.closedAt}
+                  {record.closedAt || "-"}
                 </td>
 
                 <td className="text-gray-600">
-                  {record.postedAt}
+                  {record.postedAt || "-"}
                 </td>
 
                 <td>
@@ -120,19 +179,19 @@ function BRS() {
                       ${statusStyles[record.status]}
                     `}
                   >
-                    {record.status}
+                    {record.status || "For Approval"}
                   </span>
                 </td>
 
                 <td className="font-medium">
-                  {record.buyer}
+                  {record.buyer || "-"}
                 </td>
 
-                <td>{record.project}</td>
+                <td>{record.project || "-"}</td>
 
-                <td>{record.block}</td>
+                <td>{record.block || "-"}</td>
 
-                <td>{record.lot}</td>
+                <td>{record.lot || "-"}</td>
               </tr>
             ))}
           </tbody>

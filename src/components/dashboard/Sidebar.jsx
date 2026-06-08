@@ -3,7 +3,6 @@ import {
   Users,
   ClipboardList,
   WalletCards,
-  Building2,
   BarChart3,
   Home,
   UserRound,
@@ -21,7 +20,7 @@ function Sidebar({
 
   const role =
     localStorage.getItem('role') ||
-    'Administrator'
+    'Agent'
 
   const handleLogout = () => {
 
@@ -35,6 +34,7 @@ function Sidebar({
   }
 
   const menus = {
+
     Administrator: [
       {
         key: 'dashboard',
@@ -86,6 +86,24 @@ function Sidebar({
       },
     ],
 
+    HLC: [
+      {
+        key: 'brs',
+        label: 'BRS',
+        icon: ClipboardList,
+      },
+      {
+        key: 'commission',
+        label: 'Commission',
+        icon: WalletCards,
+      },
+      {
+        key: 'reports',
+        label: 'Reports',
+        icon: BarChart3,
+      },
+    ],
+
     'Sales Director': [
       {
         key: 'dashboard',
@@ -121,17 +139,21 @@ function Sidebar({
         icon: LayoutDashboard,
       },
       {
+        key: 'commission',
+        label: 'Commission',
+        icon: WalletCards,
+      },
+      {
         key: 'reports',
         label: 'Reports',
         icon: BarChart3,
       },
-      {
-        key: 'commission',
-        label: 'Commission for Release',
-        icon: WalletCards,
-      },
     ],
+
   }
+
+  const currentMenus =
+    menus[role] || menus.Agent
 
   return (
     <aside
@@ -149,15 +171,12 @@ function Sidebar({
       "
     >
 
-      {/* TOP */}
       <div>
 
-        {/* LOGO */}
         <div className="mb-10">
 
-
           <h1 className="text-3xl font-black text-[#1f2937] mt-4">
-            ZONAL 
+            ZONAL
           </h1>
 
           <p className="text-gray-400 text-sm">
@@ -183,10 +202,9 @@ function Sidebar({
 
         </div>
 
-        {/* MENUS */}
         <div className="space-y-2">
 
-          {menus[role]?.map((item) => {
+          {currentMenus.map((item) => {
 
             const Icon = item.icon
 
@@ -239,7 +257,6 @@ function Sidebar({
 
       </div>
 
-      {/* BOTTOM */}
       <div>
 
         <button

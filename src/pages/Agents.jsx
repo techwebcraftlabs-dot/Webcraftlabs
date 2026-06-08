@@ -1,62 +1,176 @@
-import { useState } from 'react'
+import { db, auth } from '../firebase';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  createUserWithEmailAndPassword
+} from 'firebase/auth';
 import {
   Plus,
   Search,
   ArrowLeft,
-} from 'lucide-react'
+} from 'lucide-react';
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  serverTimestamp,
+} from 'firebase/firestore';
+
+const generateRandomPassword = () => {
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+
+  let password = '';
+
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(
+      Math.floor(Math.random() * chars.length)
+    );
+  }
+
+  return password;
+};
+
+const getInitialFormData = () => ({
+  hlcCode: '',
+  firstName: '',
+  lastName: '',
+  middleName: '',
+  role: '',
+  personalEmail: '',
+  zonalEmail: '',
+  password: generateRandomPassword(),
+  mobileNumber: '',
+  address: '',
+  birthDate: '',
+  birthPlace: '',
+  civilStatus: '',
+  gender: '',
+  recruiter: '',
+  accreditedDate: '',
+  locality: '',
+  team: '',
+});
 
 function Agents() {
+  const navigate = useNavigate();
 
-  const [showForm, setShowForm] =
-    useState(false)
+  const [showForm, setShowForm] = useState(false);
 
-  const agents = [
-    {
-      code: '800123',
-      role: 'HLC',
-      name: 'Chamber Watson',
-      team: 'ACHIEVERS',
-      mobile: '09123456789',
-      status: 'For Approval',
-    },
-    {
-      code: '800124',
-      role: 'HLC',
-      name: 'Jett Bind',
-      team: 'ACHIEVERS',
-      mobile: '09123456789',
-      status: 'Active',
-    },
-    {
-      code: '800125',
-      role: 'HLC',
-      name: 'Raze Ascent',
-      team: 'ACHIEVERS',
-      mobile: '09123456789',
-      status: 'Active',
-    },
-  ]
+  const [formData, setFormData] = useState(getInitialFormData);
+const generateZonalEmail = (
+  firstName,
+  lastName
+) => {
+  if (!firstName || !lastName) return '';
+
+  return `${firstName}.${lastName}`
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[^a-z0-9.]/g, '') +
+    '@zonal.com';
+};
+  const [agents, setAgents] = useState([]);
+useEffect(() => {
+  const unsubscribe = onSnapshot(
+    collection(db, 'agents'),
+    (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setAgents(data);
+    }
+  );
+
+  return () => unsubscribe();
+}, []);
+
+  const handleChange = (e) => {
+  const { name, value } = e.target;
+
+  const updated = {
+    ...formData,
+    [name]: value,
+  };
+
+  if (
+    name === 'firstName' ||
+    name === 'lastName'
+  ) {
+    updated.zonalEmail =
+      generateZonalEmail(
+        name === 'firstName'
+          ? value
+          : updated.firstName,
+
+        name === 'lastName'
+          ? value
+          : updated.lastName
+      );
+  }
+
+  setFormData(updated);
+};
+
+  const handleSave = async () => {
+  try {
+
+    await createUserWithEmailAndPassword(
+      auth,
+      formData.zonalEmail,
+      formData.password
+    );
+
+    await addDoc(
+      collection(db, 'agents'),
+      {
+        hlcCode: formData.hlcCode,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        middleName: formData.middleName,
+        role: formData.role,
+        personalEmail: formData.personalEmail,
+        zonalEmail: formData.zonalEmail,
+        password: formData.password,
+        mobileNumber: formData.mobileNumber,
+        address: formData.address,
+        birthDate: formData.birthDate,
+        birthPlace: formData.birthPlace,
+        civilStatus: formData.civilStatus,
+        gender: formData.gender,
+        recruiter: formData.recruiter,
+        accreditedDate: formData.accreditedDate,
+        locality: formData.locality,
+        team: formData.team,
+        status: 'For Approval',
+        createdAt: serverTimestamp(),
+      }
+    );
+
+    alert('Agent Created');
+    setShowForm(false);
+
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  }
+};
+  const openAddForm = () => {
+  setFormData(getInitialFormData());
+
+  setShowForm(true);
+};
 
   if (showForm) {
     return (
       <div className="bg-white rounded-[30px] p-8 shadow-sm">
-
-        {/* HEADER */}
         <div className="flex items-center justify-between mb-8">
-
           <div className="flex items-center gap-4">
-
             <button
               onClick={() => setShowForm(false)}
-              className="
-                w-10
-                h-10
-                rounded-xl
-                bg-gray-100
-                flex
-                items-center
-                justify-center
-              "
+              className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center"
             >
               <ArrowLeft size={18} />
             </button>
@@ -70,158 +184,175 @@ function Agents() {
                 Create new agent account
               </p>
             </div>
-
           </div>
-
         </div>
 
-        {/* FORM */}
-        <div className="grid grid-cols-5 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-x-5 gap-y-6">
 
-          <input
-            placeholder="ID"
-            className="border rounded-xl p-3"
+          <TextField
+            label="HLC Code"
+            name="hlcCode"
+            value={formData.hlcCode}
+            onChange={handleChange}
           />
 
-          <input
-            placeholder="HLC Code"
-            className="border rounded-xl p-3"
+          <TextField
+            label="Last Name"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
           />
 
-          <input
-            placeholder="Last Name"
-            className="border rounded-xl p-3"
+          <TextField
+            label="First Name"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleChange}
           />
 
-          <input
-            placeholder="First Name"
-            className="border rounded-xl p-3"
+          <TextField
+            label="Middle Name"
+            name="middleName"
+            value={formData.middleName}
+            onChange={handleChange}
           />
 
-          <input
-            placeholder="Middle Name"
-            className="border rounded-xl p-3"
+          <SelectField
+            label="Team"
+            name="team"
+            value={formData.team}
+            onChange={handleChange}
+            options={["Team A", "Team B", "Team C"]}
           />
 
-          <select className="border rounded-xl p-3">
-            <option>EVP</option>
-          </select>
-
-          <select className="border rounded-xl p-3">
-            <option>Sales Director</option>
-          </select>
-
-          <select className="border rounded-xl p-3">
-            <option>Team</option>
-          </select>
-
-          <input
+          <TextField
+            label="Birth Date"
+            name="birthDate"
             type="date"
-            className="border rounded-xl p-3"
+            value={formData.birthDate}
+            onChange={handleChange}
           />
 
-          <input
-            placeholder="Birth Place"
-            className="border rounded-xl p-3"
+          <TextField
+            label="Birth Place"
+            name="birthPlace"
+            value={formData.birthPlace}
+            onChange={handleChange}
           />
 
-          <select className="border rounded-xl p-3">
-            <option>Civil Status</option>
-          </select>
-
-          <select className="border rounded-xl p-3">
-            <option>Gender</option>
-          </select>
-
-          <input
-            placeholder="Address"
-            className="border rounded-xl p-3 col-span-2"
+          <SelectField
+            label="Civil Status"
+            name="civilStatus"
+            value={formData.civilStatus}
+            onChange={handleChange}
+            options={["Single", "Married", "Widowed", "Separated"]}
           />
 
-          <input
-            placeholder="Email"
-            className="border rounded-xl p-3"
+          <SelectField
+            label="Gender"
+            name="gender"
+            value={formData.gender}
+            onChange={handleChange}
+            options={["Female", "Male"]}
           />
 
-          <input
-            placeholder="Mobile Number"
-            className="border rounded-xl p-3"
+          <TextField
+            label="Address"
+            name="address"
+            value={formData.address}
+            onChange={handleChange}
+            className="md:col-span-2"
           />
 
-          <select className="border rounded-xl p-3">
-            <option>HLC Locality</option>
-          </select>
-
-          <input
-            placeholder="Recruiter"
-            className="border rounded-xl p-3"
+          <TextField
+            label="Personal Email"
+            name="personalEmail"
+            type="email"
+            value={formData.personalEmail}
+            onChange={handleChange}
           />
 
-          <input
+          <TextField
+            label="Zonal Login Email"
+            value={formData.zonalEmail}
+            readOnly
+          />
+
+          <TextField
+            label="Mobile Number"
+            name="mobileNumber"
+            value={formData.mobileNumber}
+            onChange={handleChange}
+          />
+
+          <SelectField
+            label="HLC Locality"
+            name="locality"
+            value={formData.locality}
+            onChange={handleChange}
+            options={["North", "South", "East", "West"]}
+          />
+
+          <TextField
+            label="Recruiter"
+            name="recruiter"
+            value={formData.recruiter}
+            onChange={handleChange}
+          />
+
+          <TextField
+            label="Accredited Date"
+            name="accreditedDate"
             type="date"
-            className="border rounded-xl p-3"
+            value={formData.accreditedDate}
+            onChange={handleChange}
           />
 
-          <select className="border rounded-xl p-3">
-            <option>Role</option>
-            <option>HLC</option>
-            <option>Agent</option>
-          </select>
+          <SelectField
+            label="Role"
+            name="role"
+            value={formData.role}
+            onChange={handleChange}
+            options={["Agent", "Sales Director", "EVP"]}
+          />
 
+          <TextField
+            label="Auto Generated Password"
+            value={formData.password}
+            readOnly
+            className="md:col-span-2"
+          />
         </div>
 
-        {/* BUTTONS */}
         <div className="flex justify-end gap-4 mt-10">
-
           <button
-            className="
-              px-6
-              py-3
-              rounded-xl
-              bg-gray-200
-            "
+            onClick={() => setShowForm(false)}
+            className="px-6 py-3 rounded-xl bg-gray-200"
           >
             Cancel
           </button>
 
           <button
-            className="
-              px-6
-              py-3
-              rounded-xl
-              bg-green-600
-              text-white
-            "
+            className="px-6 py-3 rounded-xl bg-green-600 text-white"
           >
             Approve
           </button>
 
           <button
-            className="
-              px-6
-              py-3
-              rounded-xl
-              bg-[#4f5dff]
-              text-white
-            "
+            onClick={handleSave}
+            className="px-6 py-3 rounded-xl bg-[#4f5dff] text-white"
           >
             Save
           </button>
-
         </div>
-
       </div>
-    )
+    );
   }
 
   return (
     <div className="bg-white rounded-[30px] p-8 shadow-sm">
-
-      {/* HEADER */}
       <div className="flex items-center justify-between mb-8">
-
         <div>
-
           <h2 className="text-3xl font-black text-[#3b281f]">
             Agents
           </h2>
@@ -229,172 +360,150 @@ function Agents() {
           <p className="text-gray-500">
             Manage all agents
           </p>
-
         </div>
 
         <button
-          onClick={() => setShowForm(true)}
-          className="
-            flex
-            items-center
-            gap-2
-            px-5
-            py-3
-            rounded-xl
-            bg-[#4f5dff]
-            text-white
-          "
+          onClick={openAddForm}
+          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#4f5dff] text-white"
         >
           <Plus size={18} />
           Add Agent
         </button>
-
       </div>
 
-      {/* SEARCH */}
       <div className="flex gap-4 mb-6">
-
         <div className="relative flex-1">
-
           <Search
             size={18}
-            className="
-              absolute
-              left-4
-              top-1/2
-              -translate-y-1/2
-              text-gray-400
-            "
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
           />
 
           <input
             placeholder="Search agent..."
-            className="
-              w-full
-              border
-              rounded-xl
-              py-3
-              pl-12
-              pr-4
-            "
+            className="w-full border rounded-xl py-3 pl-12 pr-4"
           />
-
         </div>
 
-        <select
-          className="
-            border
-            rounded-xl
-            px-4
-          "
-        >
+        <select className="border rounded-xl px-4">
           <option>All Status</option>
           <option>Active</option>
           <option>For Approval</option>
         </select>
-
       </div>
 
-      {/* TABLE */}
       <div className="overflow-auto">
-
         <table className="w-full">
-
           <thead>
-
             <tr className="border-b">
-
-              <th className="text-left py-4">
-                HLC Code
-              </th>
-
-              <th className="text-left py-4">
-                Role
-              </th>
-
-              <th className="text-left py-4">
-                Full Name
-              </th>
-
-              <th className="text-left py-4">
-                Team
-              </th>
-
-              <th className="text-left py-4">
-                Mobile
-              </th>
-
-              <th className="text-left py-4">
-                Status
-              </th>
-
+              <th className="text-left py-4">HLC Code</th>
+              <th className="text-left py-4">Role</th>
+              <th className="text-left py-4">Full Name</th>
+              <th className="text-left py-4">Team</th>
+              <th className="text-left py-4">Login Email</th>
+              <th className="text-left py-4">Status</th>
             </tr>
-
           </thead>
 
           <tbody>
-
             {agents.map((agent) => (
-
               <tr
-                key={agent.code}
-                className="border-b"
-              >
-
+  key={agent.id}
+  onClick={() => navigate(`/agents/${agent.id}`)}
+  className="border-b cursor-pointer hover:bg-gray-50"
+>
                 <td className="py-5">
-                  {agent.code}
-                </td>
+  {agent.hlcCode}
+</td>
+
+<td>
+  {agent.role || '-'}
+</td>
+
+<td>
+  {agent.firstName} {agent.lastName}
+</td>
+                <td>{agent.team}</td>
+                <td>{agent.zonalEmail}</td>
 
                 <td>
-                  {agent.role}
-                </td>
-
-                <td>
-                  {agent.name}
-                </td>
-
-                <td>
-                  {agent.team}
-                </td>
-
-                <td>
-                  {agent.mobile}
-                </td>
-
-                <td>
-
                   <span
-                    className={`
-                      px-3
-                      py-1
-                      rounded-full
-                      text-sm
-
-                      ${
-                        agent.status ===
-                        'Active'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }
-                    `}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      agent.status === 'Active'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}
                   >
                     {agent.status}
                   </span>
-
                 </td>
-
               </tr>
-
             ))}
-
           </tbody>
-
         </table>
-
       </div>
-
     </div>
-  )
+  );
 }
 
-export default Agents
+function Label({ children }) {
+  return (
+    <label className="block mb-2 text-sm font-semibold text-gray-600">
+      {children}
+    </label>
+  );
+}
+
+const fieldClassName =
+  'h-12 w-full border border-gray-200 rounded-xl px-4 text-sm outline-none transition focus:border-[#4f5dff] focus:ring-2 focus:ring-[#4f5dff]/10 disabled:bg-gray-50 read-only:bg-gray-50';
+
+function Field({ label, className = '', children }) {
+  return (
+    <div className={className}>
+      <Label>{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function TextField({
+  label,
+  className,
+  type = 'text',
+  ...props
+}) {
+  return (
+    <Field label={label} className={className}>
+      <input
+        type={type}
+        className={fieldClassName}
+        placeholder={label}
+        {...props}
+      />
+    </Field>
+  );
+}
+
+function SelectField({
+  label,
+  options,
+  className,
+  ...props
+}) {
+  return (
+    <Field label={label} className={className}>
+      <select
+        className={fieldClassName}
+        {...props}
+      >
+        <option value="">Select {label}</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </Field>
+  );
+}
+
+export default Agents;

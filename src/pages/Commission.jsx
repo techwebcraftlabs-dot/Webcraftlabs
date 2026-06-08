@@ -1,59 +1,294 @@
-import { brsRecords } from "../data/BRSData"
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  serverTimestamp,
+} from "firebase/firestore";
 
-function Commission({ setActivePage }) {
+import { db } from "../firebase";
 
+function Commission() {
+  const navigate = useNavigate();
+  const [brsRecords, setBrsRecords] = useState([]);
+  const [voucherRecords, setVoucherRecords] = useState([]);
+  const [voucherLoading, setVoucherLoading] = useState(true);
   const [selectedDeveloper, setSelectedDeveloper] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
   const [selectedBuyerName, setSelectedBuyerName] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedBRSId, setSelectedBRSId] = useState('');
+  const [voucherDate, setVoucherDate] = useState('');
+  const [remarks, setRemarks] = useState('');
+  const [voucherFile, setVoucherFile] = useState(null);
+  const [voucherPreview, setVoucherPreview] = useState('');
+  const [recordSearch, setRecordSearch] = useState('');
+  const [selectedVoucherId, setSelectedVoucherId] = useState('');
+  const [savingVoucher, setSavingVoucher] = useState(false);
 
   useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "brs"),
+      (snapshot) => {
+        const records = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setBrsRecords(records);
+      },
+      (error) => {
+        console.error(error);
+        alert(error.message);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "commissionVouchers"),
+      (snapshot) => {
+        const records = snapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }));
+
+        records.sort((a, b) => {
+          const dateA =
+            a.createdAt?.toMillis?.() ||
+            new Date(a.voucherDate || 0).getTime();
+          const dateB =
+            b.createdAt?.toMillis?.() ||
+            new Date(b.voucherDate || 0).getTime();
+
+          return dateB - dateA;
+        });
+
+        setVoucherRecords(records);
+        setVoucherLoading(false);
+      },
+      (error) => {
+        console.error(error);
+        alert(error.message);
+        setVoucherLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  const uniqueValues = (field, records = brsRecords) =>
+    [...new Set(records.map((record) => record[field]).filter(Boolean))];
+
+  const selectedRecord = brsRecords.find(
+    (record) => record.id === selectedBRSId
+  );
+
+  const filteredVoucherRecords = voucherRecords.filter((record) => {
+    const searchValue = recordSearch.toLowerCase();
+
+    return [
+      record.brsId,
+      record.buyer,
+      record.project,
+      record.voucherDate,
+      record.remarks,
+      record.status,
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(searchValue));
+  });
+
+  const getNumber = (value) =>
+    Number(String(value || "").replace(/,/g, "")) || 0;
+
+  const getRecordAmount = (record) =>
+    getNumber(record?.amount) || getNumber(record?.tcp) || getNumber(record?.nsp);
+
+  const getDeveloperRate = (record) =>
+    Number(
+      record?.rateDistribution?.find(
+        (row) => row.role?.toLowerCase() === "developer"
+      )?.rate
+    ) || 0;
+
+  const getCommissionAmount = (record) => {
+    const savedAmountDue = getNumber(record?.amountDue);
+
+    if (savedAmountDue) {
+      return savedAmountDue;
+    }
+
+    return getRecordAmount(record) * (getDeveloperRate(record) / 100);
+  };
+
+  const handleDeveloperChange = (value) => {
+    setSelectedDeveloper(value);
     setSelectedProject('');
     setSelectedBuyerName('');
-    setSelectedLocation('');
-  }, [selectedDeveloper]);
+    setSelectedBRSId('');
+  };
 
-  useEffect(() => {
-    setSelectedBuyerName(''); 
-    setSelectedLocation('');
-  }, [selectedProject]); 
-  
-  useEffect(() => {
-    setSelectedLocation('');
-  }, [selectedBuyerName]);
+  const handleProjectChange = (value) => {
+    setSelectedProject(value);
+    setSelectedBuyerName('');
+    setSelectedBRSId('');
+  };
 
-  const buyers = [
-    {
-      id: 1,
-      buyerId: 'ZR-001',
-      buyerName: 'Juan Dela Cruz',
-      project: 'Castillon Homes',
-      phaseLot: 'Phase 1 / Block 2 / Lot 3',
-      amount: 850000,
-      status: 'Approved',
-    },
+  const handleBuyerChange = (value) => {
+    setSelectedBuyerName(value);
+    setSelectedBRSId('');
+  };
 
-    {
-      id: 2,
-      buyerId: 'ZR-002',
-      buyerName: 'Maria Santos',
-      project: 'Bella Homes',
-      phaseLot: 'Phase 2 / Block 4 / Lot 8',
-      amount: 1200000,
-      status: 'Approved',
-    },
+  const clearForm = () => {
+    setSelectedDeveloper('');
+    setSelectedProject('');
+    setSelectedBuyerName('');
+    setSelectedBRSId('');
+    setVoucherDate('');
+    setRemarks('');
+    setVoucherFile(null);
+    setVoucherPreview('');
+  };
 
-    {
-      id: 3,
-      buyerId: 'ZR-003',
-      buyerName: 'John Reyes',
-      project: 'Villa Elena',
-      phaseLot: 'Phase 3 / Block 1 / Lot 5',
-      amount: 650000,
-      status: 'Pending',
-    },
-  ]
+  const handleVoucherUpload = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setVoucherFile(file);
+
+    if (!file.type.startsWith("image/")) {
+      setVoucherPreview('');
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setVoucherPreview(String(reader.result || ""));
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveVoucher = async () => {
+    if (!selectedRecord) {
+      alert("Please select a BRS record first.");
+      return;
+    }
+
+    if (!voucherDate) {
+      alert("Please select a voucher date.");
+      return;
+    }
+
+    try {
+      setSavingVoucher(true);
+
+      const voucherDoc = await addDoc(collection(db, "commissionVouchers"), {
+        brsDocId: selectedRecord.id,
+        brsId: selectedRecord.brsId || "",
+        buyer: selectedRecord.buyer || "",
+        developer: selectedRecord.developer || "",
+        project: selectedRecord.project || "",
+        phase: selectedRecord.phase || "",
+        block: selectedRecord.block || "",
+        lot: selectedRecord.lot || "",
+        amount: getRecordAmount(selectedRecord),
+        commissionAmount: getCommissionAmount(selectedRecord),
+        voucherDate,
+        remarks,
+        voucherFileName: voucherFile?.name || "",
+        voucherFileType: voucherFile?.type || "",
+        voucherPreview,
+        status: "Recorded",
+        createdAt: serverTimestamp(),
+      });
+
+      setSelectedVoucherId(voucherDoc.id);
+      alert("Voucher recorded successfully.");
+      clearForm();
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setSavingVoucher(false);
+    }
+  };
+
+  const handleDeleteVoucher = async (voucherId) => {
+    const shouldDelete = window.confirm(
+      "Delete this voucher release record?"
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, "commissionVouchers", voucherId));
+
+      if (selectedVoucherId === voucherId) {
+        setSelectedVoucherId('');
+      }
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    }
+  };
+
+  const getBrsRecordForVoucher = (voucher) =>
+    brsRecords.find((record) => record.id === voucher?.brsDocId);
+
+  const handleCompute = (record, voucher = null) => {
+    if (!record) {
+      alert("Please select a BRS record first.");
+      return;
+    }
+
+    const calculationAmount = voucher
+      ? getNumber(voucher.commissionAmount)
+      : getRecordAmount(record);
+
+    localStorage.setItem(
+      'selectedBuyer',
+      JSON.stringify({
+        ...record,
+        selectedVoucherId: voucher?.id || "",
+        voucherDate: voucher?.voucherDate || "",
+        voucherRemarks: voucher?.remarks || "",
+        buyerName: record.buyer,
+        amount: calculationAmount,
+      })
+    );
+
+    navigate('/RateDistribution');
+  };
+
+  const handleComputeVoucher = (voucher) => {
+    setSelectedVoucherId(voucher.id);
+    handleCompute(getBrsRecordForVoucher(voucher), voucher);
+  };
+
+  const handleCalculateSelectedVoucher = () => {
+    const voucher =
+      voucherRecords.find((record) => record.id === selectedVoucherId) ||
+      filteredVoucherRecords[0];
+
+    if (!voucher) {
+      alert("Please add or select a release record first.");
+      return;
+    }
+
+    handleComputeVoucher(voucher);
+  };
 
   return (
     <section className="p-8 bg-[#f5f5f5] min-h-screen">
@@ -64,122 +299,14 @@ function Commission({ setActivePage }) {
         <div>
 
           <h1 className="text-4xl font-black text-[#0d1b4c]">
-            Commission For Release
+            Add Voucher
           </h1>
 
           <p className="text-gray-500 mt-2">
-            Manage commission vouchers, incentives, and release records.
+            Create a voucher from an existing BRS buyer record.
           </p>
 
         </div>
-
-        <button
-          className="
-            bg-[#0d1b4c]
-            hover:bg-[#09122f]
-            text-white
-            px-6
-            py-3
-            rounded-xl
-            font-semibold
-            transition-all
-            shadow-lg
-          "
-        >
-          + New Voucher
-        </button>
-
-      </div>
-
-      {/* TOP TABS */}
-      <div className="flex flex-wrap gap-3 mb-8">
-
-        <button
-          className="
-            bg-[#0d1b4c]
-            text-white
-            px-5
-            py-3
-            rounded-xl
-            text-sm
-            font-semibold
-            shadow-md
-          "
-        >
-          NORMAL
-        </button>
-
-        <button
-          className="
-            bg-white
-            border
-            border-gray-200
-            text-[#0d1b4c]
-            px-5
-            py-3
-            rounded-xl
-            text-sm
-            font-semibold
-            hover:bg-gray-100
-            transition-all
-          "
-        >
-          BROKER INCENTIVE
-        </button>
-
-        <button
-          className="
-            bg-white
-            border
-            border-gray-200
-            text-[#0d1b4c]
-            px-5
-            py-3
-            rounded-xl
-            text-sm
-            font-semibold
-            hover:bg-gray-100
-            transition-all
-          "
-        >
-          TEAM LEADER INCENTIVE
-        </button>
-
-        <button
-          className="
-            bg-white
-            border
-            border-gray-200
-            text-[#0d1b4c]
-            px-5
-            py-3
-            rounded-xl
-            text-sm
-            font-semibold
-            hover:bg-gray-100
-            transition-all
-          "
-        >
-          AGENT INCENTIVE
-        </button>
-
-        <button
-          className="
-            bg-white
-            border
-            border-gray-200
-            text-[#0d1b4c]
-            px-5
-            py-3
-            rounded-xl
-            text-sm
-            font-semibold
-            hover:bg-gray-100
-            transition-all
-          "
-        >
-          COMMISSION INCENTIVE
-        </button>
 
       </div>
 
@@ -202,7 +329,7 @@ function Commission({ setActivePage }) {
 
                 <select
                   value={selectedDeveloper}
-                  onChange={(e) => setSelectedDeveloper(e.target.value)}
+                  onChange={(e) => handleDeveloperChange(e.target.value)}
                   className="
                     w-full
                     border
@@ -217,10 +344,10 @@ function Commission({ setActivePage }) {
                   "
                 >
                   <option value="" disabled hidden>Select Developer</option>
-                  {brsRecords
-                  .filter((Record, index, self) => self.findIndex((r) => r.developer === Record.developer) === index)
-                  .map((Record) => (
-                    <option value={Record.developer}>{Record.developer}</option>
+                  {uniqueValues("developer").map((developer) => (
+                    <option key={developer} value={developer}>
+                      {developer}
+                    </option>
                   ))}
                 </select>
 
@@ -235,7 +362,7 @@ function Commission({ setActivePage }) {
 
                 <select
                   value={selectedProject}
-                  onChange={(e) => setSelectedProject(e.target.value)}
+                  onChange={(e) => handleProjectChange(e.target.value)}
                   className="
                     w-full
                     border
@@ -250,11 +377,15 @@ function Commission({ setActivePage }) {
                   "
                 >
                   <option value="" disabled hidden>Select Project</option>
-                  {brsRecords
-                  .filter((Record) => Record.developer === selectedDeveloper)
-                  .filter((Record, index, self) => self.findIndex((r) => r.project === Record.project) === index)
-                  .map((Record) => (
-                    <option value={Record.project}>{Record.project}</option>  
+                  {uniqueValues(
+                    "project",
+                    brsRecords.filter(
+                      (record) => record.developer === selectedDeveloper
+                    )
+                  ).map((project) => (
+                    <option key={project} value={project}>
+                      {project}
+                    </option>
                   ))}
                 </select>
 
@@ -269,7 +400,7 @@ function Commission({ setActivePage }) {
 
                 <select
                   value={selectedBuyerName}
-                  onChange={(e) => setSelectedBuyerName(e.target.value)}
+                  onChange={(e) => handleBuyerChange(e.target.value)}
                   className="
                     w-full
                     border
@@ -284,11 +415,15 @@ function Commission({ setActivePage }) {
                   "
                 >
                   <option value="" disabled hidden>Select Buyer</option>
-                  {brsRecords
-                  .filter((Record) => Record.project && Record.project === selectedProject) 
-                  .filter((Record, index, self) => self.findIndex((r) => r.buyer === Record.buyer) === index)
-                  .map((Record, index) => (
-                    <option key={index} value={Record.buyer}> {Record.buyer} </option>
+                  {uniqueValues(
+                    "buyer",
+                    brsRecords.filter(
+                      (record) => record.project === selectedProject
+                    )
+                  ).map((buyer) => (
+                    <option key={buyer} value={buyer}>
+                      {buyer}
+                    </option>
                   ))}
                 </select>
 
@@ -302,8 +437,8 @@ function Commission({ setActivePage }) {
                 </label>
 
                 <select
-                  value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  value={selectedBRSId}
+                  onChange={(e) => setSelectedBRSId(e.target.value)}
                   className="
                     w-full
                     border
@@ -319,11 +454,12 @@ function Commission({ setActivePage }) {
                 >
                   <option value="" disabled hidden>Select Phase / Block / Lot</option>
                   {brsRecords
-                  .filter((Record) => Record.block && Record.lot)
-                  .filter((Record) => Record.project === selectedProject)
-                  .filter((Record) => Record.buyer === selectedBuyerName)
-                  .map((Record, index)=> (
-                    <option key={index} value={`Block ${Record.block} / Lot ${Record.lot}`}> Block {Record.block} / Lot {Record.lot} </option> 
+                  .filter((record) => record.project === selectedProject)
+                  .filter((record) => record.buyer === selectedBuyerName)
+                  .map((record)=> (
+                    <option key={record.id} value={record.id}>
+                      Phase {record.phase || "-"} / Block {record.block || "-"} / Lot {record.lot || "-"}
+                    </option>
                   ))} 
                 </select>
 
@@ -338,7 +474,9 @@ function Commission({ setActivePage }) {
 
                 <input
                   type="text"
-                  placeholder="₱ Enter Amount"
+                  value={selectedRecord ? getCommissionAmount(selectedRecord).toLocaleString() : ""}
+                  readOnly
+                  placeholder="Commission amount"
                   className="
                     w-full
                     border
@@ -363,6 +501,8 @@ function Commission({ setActivePage }) {
 
                 <input
                   type="date"
+                  value={voucherDate}
+                  onChange={(e) => setVoucherDate(e.target.value)}
                   className="
                     w-full
                     border
@@ -387,6 +527,8 @@ function Commission({ setActivePage }) {
 
                 <textarea
                   rows="5"
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
                   placeholder="Enter remarks here..."
                   className="
                     w-full
@@ -410,9 +552,11 @@ function Commission({ setActivePage }) {
             <div className="flex flex-wrap gap-4 mt-8">
 
               <button
+                onClick={handleSaveVoucher}
+                disabled={savingVoucher}
                 className="
-                  bg-[#0d1b4c]
-                  hover:bg-[#09122f]
+                  bg-emerald-600
+                  hover:bg-emerald-700
                   text-white
                   px-8
                   py-3
@@ -420,12 +564,14 @@ function Commission({ setActivePage }) {
                   font-semibold
                   shadow-lg
                   transition-all
+                  disabled:opacity-60
                 "
               >
-                ADD RECORD
+                {savingVoucher ? "ADDING..." : "ADD"}
               </button>
 
               <button
+                onClick={clearForm}
                 className="
                   bg-gray-200
                   hover:bg-gray-300
@@ -460,11 +606,26 @@ function Commission({ setActivePage }) {
               "
             >
 
-              <img
-                src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=1200&auto=format&fit=crop"
-                alt=""
-                className="w-full h-full object-cover"
-              />
+              {voucherPreview ? (
+                <img
+                  src={voucherPreview}
+                  alt="Voucher preview"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center p-8 text-center">
+                  <div>
+                    <p className="text-xl font-bold text-[#0d1b4c]">
+                      {voucherFile?.name || "No voucher uploaded"}
+                    </p>
+                    <p className="text-gray-500 mt-2">
+                      {voucherFile
+                        ? "File selected and ready to add."
+                        : "Upload commission voucher or proof of release."}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* OVERLAY */}
               <div
@@ -494,8 +655,7 @@ function Commission({ setActivePage }) {
 
             {/* UPLOAD BUTTON */}
             <div className="flex justify-center mt-6">
-
-              <button
+              <label
                 className="
                   bg-[#0d1b4c]
                   hover:bg-[#09122f]
@@ -506,10 +666,17 @@ function Commission({ setActivePage }) {
                   font-semibold
                   shadow-lg
                   transition-all
+                  cursor-pointer
                 "
               >
                 Upload Voucher
-              </button>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={handleVoucherUpload}
+                  className="hidden"
+                />
+              </label>
 
             </div>
 
@@ -534,6 +701,8 @@ function Commission({ setActivePage }) {
 
           <input
             type="text"
+            value={recordSearch}
+            onChange={(e) => setRecordSearch(e.target.value)}
             placeholder="Search records..."
             className="
               border
@@ -553,17 +722,17 @@ function Commission({ setActivePage }) {
         {/* TABLE */}
         <div className="overflow-x-auto rounded-2xl border border-gray-200">
 
-          <table className="w-full">
+          <table className="w-full min-w-[850px]">
 
             <thead>
 
               <tr className="bg-[#0d1b4c] text-white text-left">
 
+                <th className="p-5">BRS</th>
                 <th className="p-5">Buyer</th>
                 <th className="p-5">Project</th>
                 <th className="p-5">Phase / Block / Lot</th>
                 <th className="p-5">Amount</th>
-                <th className="p-5">Status</th>
                 <th className="p-5">Action</th>
 
               </tr>
@@ -572,45 +741,61 @@ function Commission({ setActivePage }) {
 
             <tbody>
 
-              {buyers.map((buyer) => (
+              {voucherLoading && (
+                <tr>
+                  <td
+                    colSpan="6"
+                    className="p-8 text-center text-gray-500"
+                  >
+                    Loading release records...
+                  </td>
+                </tr>
+              )}
+
+              {!voucherLoading && filteredVoucherRecords.length === 0 && (
+                <tr>
+                  <td
+                    colSpan="6"
+                    className="p-8 text-center text-gray-500"
+                  >
+                    No release records yet.
+                  </td>
+                </tr>
+              )}
+
+              {!voucherLoading && filteredVoucherRecords.map((voucher) => (
 
                 <tr
-                  key={buyer.id}
-                  className="border-b border-gray-200 hover:bg-gray-50 transition-all"
+                  key={voucher.id}
+                  onClick={() => setSelectedVoucherId(voucher.id)}
+                  className={`
+                    border-b
+                    border-gray-200
+                    hover:bg-gray-50
+                    transition-all
+                    cursor-pointer
+                    ${selectedVoucherId === voucher.id ? "bg-blue-50" : ""}
+                  `}
                 >
 
+                  <td className="p-5 font-semibold text-[#0d1b4c]">
+                    {voucher.brsId || "-"}
+                  </td>
+
                   <td className="p-5 font-semibold">
-                    {buyer.buyerName}
+                    {voucher.buyer || "-"}
                   </td>
 
                   <td className="p-5">
-                    {buyer.project}
+                    {voucher.project || "-"}
                   </td>
 
                   <td className="p-5">
-                    {buyer.phaseLot}
+                    Phase {voucher.phase || "-"} / Block {voucher.block || "-"} / Lot {voucher.lot || "-"}
                   </td>
 
                   <td className="p-5 font-bold text-[#0d1b4c]">
-                    ₱{buyer.amount.toLocaleString()}
-                  </td>
-
-                  <td className="p-5">
-
-                    <span
-                      className="
-                        bg-green-100
-                        text-green-700
-                        px-4
-                        py-2
-                        rounded-full
-                        text-sm
-                        font-medium
-                      "
-                    >
-                      Approved
-                    </span>
-
+                    P{getNumber(voucher.commissionAmount).toLocaleString()}
                   </td>
 
                   <td className="p-5">
@@ -618,31 +803,29 @@ function Commission({ setActivePage }) {
                     <div className="flex gap-3">
 
                       <button
-  onClick={() => {
-
-    localStorage.setItem(
-      'selectedBuyer',
-      JSON.stringify(buyer)
-    )
-
-    setActivePage('calculation')
-
-  }}
-  className="
-    bg-blue-500
-    hover:bg-blue-600
-    text-white
-    px-4
-    py-2
-    rounded-lg
-    text-sm
-    transition-all
-  "
->
-  Manage
-</button>
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleComputeVoucher(voucher);
+                        }}
+                        className="
+                          bg-blue-500
+                          hover:bg-blue-600
+                          text-white
+                          px-4
+                          py-2
+                          rounded-lg
+                          text-sm
+                          transition-all
+                        "
+                      >
+                        Manage
+                      </button>
 
                       <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDeleteVoucher(voucher.id);
+                        }}
                         className="
                           bg-red-500
                           hover:bg-red-600
@@ -675,7 +858,7 @@ function Commission({ setActivePage }) {
         <div className="flex justify-end gap-4 mt-8">
 
           <button
-            onClick={() => setActivePage('calculation')}
+            onClick={handleCalculateSelectedVoucher}
             className="
               bg-[#0d1b4c]
               hover:bg-[#09122f]
@@ -692,6 +875,7 @@ function Commission({ setActivePage }) {
           </button>
 
           <button
+            onClick={clearForm}
             className="
               bg-gray-200
               hover:bg-gray-300
@@ -715,3 +899,4 @@ function Commission({ setActivePage }) {
 }
 
 export default Commission
+

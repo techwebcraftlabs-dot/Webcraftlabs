@@ -1,195 +1,723 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+} from "firebase/firestore";
 
-function BRSDetails() {
+import { db } from "../firebase";
+
+const initialFormData = {
+  brsId: "",
+  trippingDate: "",
+  closedAt: "",
+  postedAt: "",
+  hlcCode: "",
+  teamName: "",
+  buyer: "",
+  buyerAddress: "",
+  buyerMobile: "",
+  buyerEmail: "",
+  buyerBirthdate: "",
+  buyerAge: "",
+  developer: "",
+  project: "",
+  lts: "",
+  projectLocation: "",
+  direct: "",
+  phase: "",
+  block: "",
+  lot: "",
+  lotArea: "",
+  floorArea: "",
+  modelUnit: "",
+  tcp: "",
+  totalDp: "",
+  financingScheme: "",
+  nsp: "",
+  reservation: "",
+  paymentTerms: "",
+  loanValue: "",
+  monthlyDp: "",
+  monthlyAmortization: "",
+  wrongInput: false,
+  notes: "",
+  amountDue: "",
+  developerDeductions: "",
+};
+
+const initialRateDistribution = [
+  { role: "Developer", name: "", rate: "" },
+  { role: "HLC", name: "", rate: "" },
+  { role: "Assistant HLC 1", name: "", rate: "" },
+  { role: "Assistant HLC 2", name: "", rate: "" },
+  { role: "JBA", name: "JBA", rate: "" },
+  { role: "ZONAL", name: "ZONAL", rate: "" },
+  { role: "Local SD", name: "", rate: "" },
+  { role: "Recruiter", name: "", rate: "" },
+  { role: "Coordinator", name: "", rate: "" },
+  { role: "ADS/Scholar", name: "", rate: "" },
+  { role: "EVP", name: "", rate: "" },
+  { role: "Documentation HLC", name: "", rate: "" },
+  { role: "Referral", name: "", rate: "" },
+  { role: "Referral 2", name: "", rate: "" },
+];
+
+function AddBRS() {
   const navigate = useNavigate();
+  const [formData, setFormData] =
+    useState(initialFormData);
+  const [rateDistribution, setRateDistribution] =
+    useState(initialRateDistribution);
+  const [saving, setSaving] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, type, checked, value } = e.target;
+
+    setFormData({
+      ...formData,
+      [name]: type === "checkbox" ? checked : value,
+    });
+  };
+
+  const handleRateChange = (index, field, value) => {
+    setRateDistribution((currentRows) =>
+      currentRows.map((row, rowIndex) =>
+        rowIndex === index
+          ? { ...row, [field]: value }
+          : row
+      )
+    );
+  };
+
+  const handleAddRateRow = () => {
+    setRateDistribution((currentRows) => [
+      ...currentRows,
+      {
+        role: "",
+        name: "",
+        rate: "",
+      },
+    ]);
+  };
+
+  const handleRemoveRateRow = (index) => {
+    setRateDistribution((currentRows) =>
+      currentRows.filter((_, rowIndex) => rowIndex !== index)
+    );
+  };
+
+  const handleSave = async () => {
+    if (!formData.brsId || !formData.buyer || !formData.project) {
+      alert("Please fill out BRS No., Buyer, and Project.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      await addDoc(collection(db, "brs"), {
+        ...formData,
+        amountDue: Number(cleanNumber(formData.amountDue)) || 0,
+        developerDeductions:
+          Number(cleanNumber(formData.developerDeductions)) || 0,
+        rateDistribution: rateDistribution
+          .filter((row) => row.role || row.name || row.rate)
+          .map((row) => ({
+            ...row,
+            rate: Number(row.rate) || 0,
+            taxable: !["developer", "zonal"].includes(
+              row.role.toLowerCase()
+            ),
+          })),
+        status: "For Approval",
+        createdAt: serverTimestamp(),
+      });
+
+      alert("BRS saved successfully.");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <section className="bg-[#f4f7fb] min-h-screen p-8">
-
-      {/* HEADER */}
       <div className="flex items-center justify-between mb-8">
-
         <div>
           <h1 className="text-3xl font-black text-[#0d1b4c]">
-            BRS NO. 29403
+            Add BRS
           </h1>
 
           <p className="text-gray-500 mt-2">
-            Buyer Registration Details
+            Create a buyer registration sheet
           </p>
         </div>
 
         <div className="flex gap-4">
-
           <button
-            onClick={() => navigate("/dashboard")}
-            className="
-              bg-gray-200
-              hover:bg-gray-300
-              px-6
-              py-3
-              rounded-xl
-              font-semibold
-            "
+            onClick={() => navigate(-1)}
+            className="bg-gray-200 hover:bg-gray-300 px-6 py-3 rounded-xl font-semibold"
           >
-            Back
+            Cancel
           </button>
 
           <button
-            onClick={() => navigate("/RateDistribution")}
-            className="
-              bg-[#0d1b4c]
-              hover:bg-[#09122f]
-              text-white
-              px-6
-              py-3
-              rounded-xl
-              font-semibold
-              shadow-lg
-            "
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-[#0d1b4c] hover:bg-[#09122f] text-white px-8 py-3 rounded-xl font-semibold shadow-lg disabled:opacity-60"
           >
-            Proceed to Commission
+            {saving ? "Saving..." : "Save BRS"}
           </button>
-
         </div>
-
       </div>
 
-      {/* BUYER REGISTRATION SHEET */}
-      <div className="bg-white rounded-3xl shadow-lg overflow-hidden mb-8">
+      <FormSection title="Buyer's Registration Sheet">
+        <TextField
+          label="BRS No."
+          name="brsId"
+          value={formData.brsId}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Tripping Date"
+          name="trippingDate"
+          type="date"
+          value={formData.trippingDate}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Closing Date"
+          name="closedAt"
+          type="date"
+          value={formData.closedAt}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Posted Date"
+          name="postedAt"
+          type="date"
+          value={formData.postedAt}
+          onChange={handleChange}
+        />
+        <TextField
+          label="HLC Code"
+          name="hlcCode"
+          value={formData.hlcCode}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Team Name"
+          name="teamName"
+          value={formData.teamName}
+          onChange={handleChange}
+        />
+      </FormSection>
 
-        <div className="bg-[#2563eb] px-8 py-4">
-          <h2 className="text-white text-lg font-bold">
-            BUYER'S REGISTRATION SHEET
-          </h2>
-        </div>
+      <FormSection title="Buyer's Information">
+        <TextField
+          label="Full Name"
+          name="buyer"
+          value={formData.buyer}
+          onChange={handleChange}
+          className="lg:col-span-2"
+        />
+        <TextField
+          label="Address"
+          name="buyerAddress"
+          value={formData.buyerAddress}
+          onChange={handleChange}
+          className="lg:col-span-2"
+        />
+        <TextField
+          label="Mobile"
+          name="buyerMobile"
+          value={formData.buyerMobile}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Email"
+          name="buyerEmail"
+          type="email"
+          value={formData.buyerEmail}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Birthdate"
+          name="buyerBirthdate"
+          type="date"
+          value={formData.buyerBirthdate}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Age"
+          name="buyerAge"
+          value={formData.buyerAge}
+          onChange={handleChange}
+        />
+      </FormSection>
 
-        <div className="p-8 grid lg:grid-cols-5 md:grid-cols-2 gap-5">
+      <FormSection title="Property Details">
+        <TextField
+          label="Developer"
+          name="developer"
+          value={formData.developer}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Project"
+          name="project"
+          value={formData.project}
+          onChange={handleChange}
+        />
+        <TextField
+          label="LTS"
+          name="lts"
+          value={formData.lts}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Project Location"
+          name="projectLocation"
+          value={formData.projectLocation}
+          onChange={handleChange}
+        />
+        <SelectField
+          label="Direct"
+          name="direct"
+          value={formData.direct}
+          onChange={handleChange}
+          options={["YES", "NO"]}
+        />
+        <TextField
+          label="Phase"
+          name="phase"
+          value={formData.phase}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Block"
+          name="block"
+          value={formData.block}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Lot"
+          name="lot"
+          value={formData.lot}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Lot Area (SQM)"
+          name="lotArea"
+          value={formData.lotArea}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Floor Area (SQM)"
+          name="floorArea"
+          value={formData.floorArea}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Model Unit"
+          name="modelUnit"
+          value={formData.modelUnit}
+          onChange={handleChange}
+        />
+      </FormSection>
 
-          <Input label="Tripping Date" value="11/20/2025" />
-          <Input label="Closing Date" value="11/21/2025" />
-          <Input label="Posted" value="11/21/2025" />
-          <Input label="HLC Code" value="80242" />
-          <Input label="Team Name" value="Success" />
+      <FormSection title="Account Details">
+        <TextField
+          label="TCP"
+          name="tcp"
+          value={formData.tcp}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Total DP"
+          name="totalDp"
+          value={formData.totalDp}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Financing Scheme"
+          name="financingScheme"
+          value={formData.financingScheme}
+          onChange={handleChange}
+        />
+        <TextField
+          label="NSP"
+          name="nsp"
+          value={formData.nsp}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Reservation"
+          name="reservation"
+          value={formData.reservation}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Payment Terms"
+          name="paymentTerms"
+          value={formData.paymentTerms}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Loan Value"
+          name="loanValue"
+          value={formData.loanValue}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Monthly DP"
+          name="monthlyDp"
+          value={formData.monthlyDp}
+          onChange={handleChange}
+        />
+        <TextField
+          label="Monthly Amortization"
+          name="monthlyAmortization"
+          value={formData.monthlyAmortization}
+          onChange={handleChange}
+        />
+      </FormSection>
 
-        </div>
-
-      </div>
-
-      {/* BUYER INFO */}
-      <div className="bg-white rounded-3xl shadow-lg overflow-hidden mb-8">
-
-        <div className="bg-[#2563eb] px-8 py-4">
-          <h2 className="text-white text-lg font-bold">
-            BUYER'S INFORMATION
-          </h2>
-        </div>
-
-        <div className="p-8">
-
-          <div className="grid lg:grid-cols-2 gap-5 mb-5">
-            <Input label="Full Name" value="Chamber Watson" />
-            <Input label="Address" value="Quezon City" />
+      <FormSection title="Rate Distribution">
+        <div className="lg:col-span-4">
+          <div className="grid lg:grid-cols-3 gap-x-8 gap-y-4">
+            {rateDistribution.map((row, index) => (
+              <RateDistributionField
+                key={`${row.role}-${index}`}
+                row={row}
+                canEditRole={index >= initialRateDistribution.length}
+                onChange={(field, value) =>
+                  handleRateChange(index, field, value)
+                }
+                onRemove={() => handleRemoveRateRow(index)}
+              />
+            ))}
           </div>
 
-          <div className="grid lg:grid-cols-4 gap-5">
-            <Input label="Mobile" value="09123456789" />
-            <Input label="Email" value="sample@gmail.com" />
-            <Input label="Birthdate" value="11/20/2025" />
-            <Input label="Age" value="23" />
-          </div>
-
+          <button
+            type="button"
+            onClick={handleAddRateRow}
+            className="mt-4 bg-[#2563eb] text-white px-5 py-3 rounded-xl font-semibold"
+          >
+            Add Extension
+          </button>
         </div>
+      </FormSection>
 
-      </div>
-
-      {/* PROPERTY DETAILS */}
-      <div className="bg-white rounded-3xl shadow-lg overflow-hidden mb-8">
-
-        <div className="bg-[#2563eb] px-8 py-4">
-          <h2 className="text-white text-lg font-bold">
-            PROPERTY DETAILS
-          </h2>
-        </div>
-
-        <div className="p-8">
-
-          <div className="grid lg:grid-cols-5 gap-5 mb-5">
-            <Input label="Developer" value="Zonal Realty" />
-            <Input label="Project" value="Castillon Homes" />
-            <Input label="LTS" value="11/20/2025" />
-            <Input label="Project Location" value="Cavite" />
-            <Input label="Direct" value="YES" />
-          </div>
-
-          <div className="grid lg:grid-cols-6 gap-5">
-            <Input label="Phase" value="1" />
-            <Input label="Block" value="02" />
-            <Input label="Lot" value="30" />
-            <Input label="Lot Area (SQM)" value="45.00" />
-            <Input label="Floor Area (SQM)" value="40.00" />
-            <Input label="Model Unit" value="ROW HOUSE" />
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* ACCOUNT DETAILS */}
-      <div className="bg-white rounded-3xl shadow-lg overflow-hidden mb-8">
-
-        <div className="bg-[#2563eb] px-8 py-4">
-          <h2 className="text-white text-lg font-bold">
-            ACCOUNT DETAILS
-          </h2>
-        </div>
-
-        <div className="p-8 grid lg:grid-cols-3 gap-5">
-
-          <Input label="TCP" value="₱ 2,500,000" />
-          <Input label="Total DP" value="₱ 250,000" />
-          <Input label="Financing Scheme" value="Bank Financing" />
-
-          <Input label="NSP" value="₱ 2,250,000" />
-          <Input label="Reservation" value="₱ 15,000" />
-          <Input label="Payment Terms" value="24 Months" />
-
-          <Input label="Loan Value" value="₱ 1,800,000" />
-          <Input label="Monthly DP" value="₱ 10,000" />
-          <Input label="Monthly Amortization" value="₱ 18,500" />
-
-        </div>
-
-      </div>
-
+      <BRSReleaseSection
+        formData={formData}
+        rateDistribution={rateDistribution}
+        onChange={handleChange}
+      />
     </section>
   );
 }
 
-function Input({ label, value }) {
+function cleanNumber(value) {
+  return String(value || "").replace(/,/g, "");
+}
+
+function formatCurrency(value) {
+  return Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function getAccountAmount(formData) {
+  return (
+    Number(cleanNumber(formData.nsp)) ||
+    Number(cleanNumber(formData.tcp)) ||
+    0
+  );
+}
+
+function getDeveloperRate(rateDistribution) {
+  return (
+    Number(
+      rateDistribution.find(
+        (row) => row.role.toLowerCase() === "developer"
+      )?.rate
+    ) || 0
+  );
+}
+
+function getComputedAmountDue(formData, rateDistribution) {
+  const manualAmountDue = Number(cleanNumber(formData.amountDue));
+
+  if (manualAmountDue) {
+    return manualAmountDue;
+  }
+
+  return getAccountAmount(formData) *
+    (getDeveloperRate(rateDistribution) / 100);
+}
+
+function BRSReleaseSection({
+  formData,
+  rateDistribution,
+  onChange,
+}) {
+  const amountDue = getComputedAmountDue(
+    formData,
+    rateDistribution
+  );
+  const received = 0;
+  const developerDeductions =
+    Number(cleanNumber(formData.developerDeductions)) || 0;
+  const balance = amountDue - received - developerDeductions;
+  const receivedPercent = amountDue
+    ? (received / amountDue) * 100
+    : 0;
+
+  return (
+    <>
+      <div className="bg-white rounded-3xl shadow-lg p-8 mb-8">
+        <label className="flex items-center gap-3 mb-3 font-medium text-gray-700">
+          <input
+            type="checkbox"
+            name="wrongInput"
+            checked={formData.wrongInput}
+            onChange={onChange}
+          />
+          Wrong Input
+        </label>
+
+        <Label>Notes</Label>
+        <textarea
+          name="notes"
+          value={formData.notes}
+          onChange={onChange}
+          rows="5"
+          placeholder="Notes..."
+          className="w-full border border-gray-300 rounded-2xl p-5 outline-none resize-y focus:ring-2 focus:ring-[#2563eb]"
+        />
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-lg p-8 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-5">
+          <TextField
+            label="Amount Due"
+            name="amountDue"
+            value={formData.amountDue}
+            onChange={onChange}
+            placeholder={formatCurrency(amountDue)}
+          />
+          <ReadOnlyField
+            label="Received"
+            value={formatCurrency(received)}
+          />
+          <ReadOnlyField
+            label="Received %"
+            value={`${receivedPercent.toFixed(0)}%`}
+          />
+          <TextField
+            label="Developer Deductions"
+            name="developerDeductions"
+            value={formData.developerDeductions}
+            onChange={onChange}
+          />
+          <ReadOnlyField
+            label="Balance"
+            value={formatCurrency(balance)}
+          />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-lg overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-[#f5f5f5]">
+            <tr className="text-left text-gray-600">
+              <th className="p-5">Date</th>
+              <th className="p-5">Amount</th>
+              <th className="p-5">Commission</th>
+              <th className="p-5">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td
+                colSpan="4"
+                className="p-8 text-center text-gray-500"
+              >
+                Voucher history will appear here after this BRS is
+                included in a commission voucher.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+function ReadOnlyField({ label, value }) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-gray-500 mb-2">
-        {label}
-      </label>
-
+      <Label>{label}</Label>
       <input
         type="text"
-        defaultValue={value}
-        className="
-          w-full
-          border
-          border-gray-300
-          rounded-xl
-          px-4
-          py-3
-          outline-none
-          focus:ring-2
-          focus:ring-[#2563eb]
-        "
+        readOnly
+        value={value}
+        className={`${fieldClassName} bg-gray-50 text-gray-700`}
       />
     </div>
   );
 }
 
-export default BRSDetails;
+function FormSection({ title, children }) {
+  return (
+    <div className="bg-white rounded-3xl shadow-lg overflow-hidden mb-8">
+      <div className="bg-[#2563eb] px-8 py-4">
+        <h2 className="text-white text-lg font-bold">
+          {title}
+        </h2>
+      </div>
+
+      <div className="p-8 grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Label({ children }) {
+  return (
+    <label className="block text-sm font-semibold text-gray-500 mb-2">
+      {children}
+    </label>
+  );
+}
+
+const fieldClassName =
+  "h-12 w-full border border-gray-300 rounded-xl px-4 outline-none focus:ring-2 focus:ring-[#2563eb]";
+
+function TextField({
+  label,
+  className = "",
+  type = "text",
+  ...props
+}) {
+  return (
+    <div className={className}>
+      <Label>{label}</Label>
+      <input
+        type={type}
+        autoComplete="new-password"
+        placeholder={label}
+        className={fieldClassName}
+        {...props}
+      />
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  className = "",
+  options,
+  ...props
+}) {
+  return (
+    <div className={className}>
+      <Label>{label}</Label>
+      <select
+        autoComplete="off"
+        className={fieldClassName}
+        {...props}
+      >
+        <option value="">Select {label}</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function RateDistributionField({
+  row,
+  canEditRole,
+  onChange,
+  onRemove,
+}) {
+  const isDeveloperRate =
+    row.role.toLowerCase() === "developer";
+  const hasLockedName =
+    ["jba", "zonal"].includes(row.role.toLowerCase());
+  const label = isDeveloperRate
+    ? "Developer's Rate"
+    : row.role;
+
+  return (
+    <div>
+      {canEditRole ? (
+        <input
+          value={row.role}
+          onChange={(e) => onChange("role", e.target.value)}
+          autoComplete="new-password"
+          placeholder="Role"
+          className="mb-1 w-full text-xs font-semibold text-gray-500 uppercase tracking-wide outline-none"
+        />
+      ) : (
+        <Label>{label}</Label>
+      )}
+
+      <div className="flex">
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={row.rate}
+          onChange={(e) => onChange("rate", e.target.value)}
+          autoComplete="new-password"
+          placeholder="0.00"
+          className={`h-12 border border-gray-300 px-3 outline-none focus:ring-2 focus:ring-[#2563eb] ${
+            isDeveloperRate
+              ? "w-full rounded-xl"
+              : "w-[86px] rounded-l-xl"
+          }`}
+        />
+
+        {!isDeveloperRate && (
+          <input
+            value={row.name}
+            onChange={(e) => onChange("name", e.target.value)}
+            readOnly={hasLockedName}
+            autoComplete="new-password"
+            placeholder="Name"
+            className={`h-12 min-w-0 flex-1 border border-l-0 border-gray-300 rounded-r-xl px-4 outline-none focus:ring-2 focus:ring-[#2563eb] ${
+              hasLockedName
+                ? "bg-gray-100 font-semibold text-gray-700"
+                : ""
+            }`}
+          />
+        )}
+      </div>
+
+      {canEditRole && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="mt-2 text-sm font-semibold text-rose-600"
+        >
+          Remove
+        </button>
+      )}
+    </div>
+  );
+}
+
+export default AddBRS;

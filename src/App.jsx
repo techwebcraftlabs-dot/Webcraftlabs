@@ -2,7 +2,7 @@ import {
   BrowserRouter,
   Routes,
   Route,
-  useLocation
+  useLocation,
 } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
@@ -14,6 +14,7 @@ import Calculation from "./pages/Calculation";
 import RateDistribution from "./pages/RateDistribution";
 import AddBRS from "./pages/AddBRS";
 import BRSDetails from "./pages/BRSDetails";
+import AgentDetails from "./pages/AgentDetails";
 
 function Layout() {
   const location = useLocation();
@@ -23,25 +24,26 @@ function Layout() {
       {location.pathname === "/" && <Navbar />}
 
       <Routes>
-        {/* HOME */}
         <Route
           path="/"
           element={<Home />}
         />
 
-        {/* LOGIN */}
         <Route
           path="/login"
           element={<Login />}
         />
 
-        {/* DASHBOARD */}
         <Route
           path="/dashboard"
           element={<Dashboard />}
         />
 
-        {/* CALCULATION */}
+        <Route
+          path="/agents/:id"
+          element={<AgentDetails />}
+        />
+
         <Route
           path="/calculation"
           element={<Calculation />}
@@ -52,21 +54,23 @@ function Layout() {
           element={<Calculation />}
         />
 
-        {/* RATE DISTRIBUTION */}
         <Route
           path="/RateDistribution"
           element={<RateDistribution />}
         />
 
-        {/* ADD BRS */}
         <Route
           path="/add-brs"
           element={<AddBRS />}
         />
 
-        {/* BRS DETAILS */}
         <Route
           path="/brs-details"
+          element={<BRSDetails />}
+        />
+
+        <Route
+          path="/brs-details/:id"
           element={<BRSDetails />}
         />
       </Routes>

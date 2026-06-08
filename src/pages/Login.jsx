@@ -1,53 +1,151 @@
-import { useState } from 'react';
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { useNavigate } from 'react-router-dom';
-import { auth } from '../firebase';
+import { useState } from 'react'
+import {
+  signInWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth'
+import { useNavigate } from 'react-router-dom'
+
+import { auth, db } from '../firebase'
+
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+} from 'firebase/firestore'
 
 function Login() {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const navigate = useNavigate()
+
+  const [email, setEmail] = useState('')
+  const [password, setPassword] =
+    useState('')
+
+  const [loading, setLoading] =
+    useState(false)
 
   const handleLogin = async (e) => {
     e.preventDefault()
 
     if (!email || !password) {
+      alert('Please enter email and password')
       return
     }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);  
-      navigate('/Dashboard');
-    } catch (error) {
-      // This is where we catch that 400 error!
-      let Message = "An error occurred. Please try again.";
-      console.log(error.code);
+      setLoading(true)
 
-      // Switch case to handle specific Firebase Auth errors
-      switch (error.code) {
-        case "auth/invalid-email":
-          Message = "The email address is not formatted correctly.";
-          break;
-        case "auth/user-disabled":
-          Message = "This user account has been disabled.";
-          break;
-        case "auth/user-not-found":
-        case "auth/wrong-password":
-        case "auth/invalid-credential": 
-          // Modern Firebase merges these for security, so hackers can't guess emails
-          Message = "Incorrect email or password. Please try again.";
-          break;
-        case "auth/too-many-requests":
-          Message = "Too many failed attempts. This account has been temporarily blocked. Try again later.";
-          break;
+      const userCredential =
+        await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        )
+
+      const user =
+        userCredential.user
+
+      const q = query(
+        collection(db, 'agents'),
+        where(
+          'zonalEmail',
+          '==',
+          user.email
+        )
+      )
+
+      const snapshot =
+        await getDocs(q)
+
+      if (!snapshot.empty) {
+        const agentData =
+          snapshot.docs[0].data()
+
+        if (agentData.status !== 'Active') {
+          await signOut(auth)
+          alert(
+            'Your account is still for approval.'
+          )
+          return
+        }
+
+        localStorage.setItem(
+          'role',
+          agentData.role ||
+            'Agent'
+        )
+
+        localStorage.setItem(
+          'fullName',
+          `${agentData.firstName || ''} ${
+            agentData.lastName || ''
+          }`
+        )
+
+        localStorage.setItem(
+          'agentId',
+          snapshot.docs[0].id
+        )
+
+        localStorage.setItem(
+          'agentData',
+          JSON.stringify(agentData)
+        )
+      } else {
+        localStorage.setItem(
+          'role',
+          'Administrator'
+        )
+
+        localStorage.setItem(
+          'fullName',
+          'Administrator'
+        )
       }
-      alert(Message);
+
+      navigate('/Dashboard')
+    } catch (error) {
+      console.log(error)
+
+      let Message =
+        'Login failed.'
+
+      switch (error.code) {
+        case 'auth/invalid-email':
+          Message =
+            'Invalid email format.'
+          break
+
+        case 'auth/user-disabled':
+          Message =
+            'Account disabled.'
+          break
+
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+          Message =
+            'Incorrect email or password.'
+          break
+
+        case 'auth/too-many-requests':
+          Message =
+            'Too many login attempts. Try again later.'
+          break
+
+        default:
+          Message =
+            error.message
+      }
+
+      alert(Message)
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
     <section className="min-h-screen bg-[#f6f1eb] flex items-center justify-center px-6">
-
       <div className="bg-white w-full max-w-md p-10 rounded-[35px] shadow-2xl">
 
         <h1 className="text-4xl font-black text-[#3b281f] text-center">
@@ -62,10 +160,7 @@ function Login() {
           onSubmit={handleLogin}
           className="mt-10 space-y-5"
         >
-
-          {/* EMAIL */}
           <div>
-
             <label className="text-sm text-gray-500">
               Email
             </label>
@@ -74,7 +169,11 @@ function Login() {
               type="email"
               placeholder="Enter your email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) =>
+                setEmail(
+                  e.target.value
+                )
+              }
               className="
                 w-full
                 mt-2
@@ -86,12 +185,9 @@ function Login() {
                 outline-none
               "
             />
-
           </div>
 
-          {/* PASSWORD */}
           <div>
-
             <label className="text-sm text-gray-500">
               Password
             </label>
@@ -100,7 +196,11 @@ function Login() {
               type="password"
               placeholder="Enter your password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) =>
+                setPassword(
+                  e.target.value
+                )
+              }
               className="
                 w-full
                 mt-2
@@ -112,12 +212,11 @@ function Login() {
                 outline-none
               "
             />
-
           </div>
 
-          {/* BUTTON */}
           <button
             type="submit"
+            disabled={loading}
             className="
               w-full
               bg-[#3b281f]
@@ -127,15 +226,15 @@ function Login() {
               font-semibold
               hover:bg-[#2a1d17]
               transition-all
+              disabled:opacity-50
             "
           >
-            Login
+            {loading
+              ? 'Logging in...'
+              : 'Login'}
           </button>
-
         </form>
-
       </div>
-
     </section>
   )
 }

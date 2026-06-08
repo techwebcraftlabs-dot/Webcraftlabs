@@ -85,13 +85,6 @@ function Dashboard() {
     />
   )
 
-case 'create-voucher':
-  return (
-    <Commission
-      setActivePage={setActivePage}
-    />
-  )
-
     // CREATE VOUCHER
     case 'create-voucher':
       return (
