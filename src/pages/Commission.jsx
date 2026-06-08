@@ -28,6 +28,9 @@ function Commission() {
   const [voucherPreview, setVoucherPreview] = useState('');
   const [recordSearch, setRecordSearch] = useState('');
   const [selectedVoucherId, setSelectedVoucherId] = useState('');
+  const [currentVoucherBatchId, setCurrentVoucherBatchId] =
+    useState(() => createVoucherBatchId());
+  const [currentVoucherIds, setCurrentVoucherIds] = useState([]);
   const [savingVoucher, setSavingVoucher] = useState(false);
 
   useEffect(() => {
@@ -90,7 +93,12 @@ function Commission() {
     (record) => record.id === selectedBRSId
   );
 
-  const filteredVoucherRecords = voucherRecords.filter((record) => {
+  const currentVoucherRecords = voucherRecords.filter((record) =>
+    record.voucherBatchId === currentVoucherBatchId ||
+    currentVoucherIds.includes(record.id)
+  );
+
+  const filteredVoucherRecords = currentVoucherRecords.filter((record) => {
     const searchValue = recordSearch.toLowerCase();
 
     return [
@@ -107,6 +115,18 @@ function Commission() {
 
   const getNumber = (value) =>
     Number(String(value || "").replace(/,/g, "")) || 0;
+
+  const voucherGrossTotal =
+    getNumber(voucherGrossAmount) || getNumber(currentVoucherRecords[0]?.amount);
+
+  const buyerAssignedTotal = currentVoucherRecords.reduce(
+    (total, record) => total + getNumber(record.commissionAmount),
+    0
+  );
+
+  const voucherBalance = voucherGrossTotal - buyerAssignedTotal;
+  const isVoucherTallied =
+    voucherGrossTotal > 0 && Math.abs(voucherBalance) < 0.01;
 
   const getRecordAmount = (record) =>
     getNumber(record?.amount) || getNumber(record?.tcp) || getNumber(record?.nsp);
@@ -169,6 +189,22 @@ function Commission() {
     setVoucherPreview('');
   };
 
+  const clearBuyerSelection = () => {
+    setSelectedDeveloper('');
+    setSelectedProject('');
+    setSelectedBuyerName('');
+    setSelectedBRSId('');
+    setBuyerAssignedAmount('');
+  };
+
+  const resetVoucherSession = () => {
+    clearForm();
+    setRecordSearch('');
+    setSelectedVoucherId('');
+    setCurrentVoucherIds([]);
+    setCurrentVoucherBatchId(createVoucherBatchId());
+  };
+
   const handleVoucherUpload = (event) => {
     const file = event.target.files?.[0];
 
@@ -205,6 +241,7 @@ function Commission() {
 
     const grossAmount = getNumber(voucherGrossAmount);
     const assignedAmount = getNumber(buyerAssignedAmount);
+    const nextAssignedTotal = buyerAssignedTotal + assignedAmount;
 
     if (!grossAmount) {
       alert("Please enter the voucher gross commission.");
@@ -216,8 +253,8 @@ function Commission() {
       return;
     }
 
-    if (assignedAmount > grossAmount) {
-      alert("Buyer assigned amount cannot be greater than voucher gross commission.");
+    if (nextAssignedTotal > grossAmount) {
+      alert("Total buyer amount cannot be greater than voucher gross commission.");
       return;
     }
 
@@ -225,6 +262,8 @@ function Commission() {
       setSavingVoucher(true);
 
       const voucherDoc = await addDoc(collection(db, "commissionVouchers"), {
+        voucherBatchId: currentVoucherBatchId,
+        voucherNo: currentVoucherBatchId,
         brsDocId: selectedRecord.id,
         brsId: selectedRecord.brsId || "",
         buyer: selectedRecord.buyer || "",
@@ -240,13 +279,15 @@ function Commission() {
         voucherFileName: voucherFile?.name || "",
         voucherFileType: voucherFile?.type || "",
         voucherPreview,
-        status: "Recorded",
+        status: "For Release",
+        computationStatus: "Pending",
         createdAt: serverTimestamp(),
       });
 
       setSelectedVoucherId(voucherDoc.id);
+      setCurrentVoucherIds((current) => [voucherDoc.id, ...current]);
       alert("Voucher recorded successfully.");
-      clearForm();
+      clearBuyerSelection();
     } catch (error) {
       console.error(error);
       alert(error.message);
@@ -266,6 +307,9 @@ function Commission() {
 
     try {
       await deleteDoc(doc(db, "commissionVouchers", voucherId));
+      setCurrentVoucherIds((current) =>
+        current.filter((id) => id !== voucherId)
+      );
 
       if (selectedVoucherId === voucherId) {
         setSelectedVoucherId('');
@@ -310,16 +354,42 @@ function Commission() {
   };
 
   const handleCalculateSelectedVoucher = () => {
-    const voucher =
-      voucherRecords.find((record) => record.id === selectedVoucherId) ||
-      filteredVoucherRecords[0];
+    const vouchersToCalculate = currentVoucherRecords;
 
-    if (!voucher) {
+    if (vouchersToCalculate.length === 0) {
       alert("Please add or select a release record first.");
       return;
     }
 
-    handleComputeVoucher(voucher);
+    if (!voucherGrossTotal) {
+      alert("Please enter the voucher gross commission.");
+      return;
+    }
+
+    if (!isVoucherTallied) {
+      alert(
+        `Voucher gross commission must tally with total buyer amount. Gross: P${voucherGrossTotal.toLocaleString()}, Total Buyer Amount: P${buyerAssignedTotal.toLocaleString()}.`
+      );
+      return;
+    }
+
+    localStorage.removeItem("selectedBuyer");
+    localStorage.setItem(
+      "selectedVoucherBatch",
+      JSON.stringify({
+        voucherBatchId: currentVoucherBatchId,
+        voucherNo: currentVoucherBatchId,
+        voucherDate: vouchersToCalculate[0]?.voucherDate || voucherDate,
+        voucherGrossAmount: voucherGrossTotal,
+        buyerAssignedTotal,
+        buyers: vouchersToCalculate.map((voucher) => ({
+          ...voucher,
+          brsRecord: getBrsRecordForVoucher(voucher),
+        })),
+      })
+    );
+
+    navigate('/RateDistribution');
   };
 
   return (
@@ -494,33 +564,6 @@ function Commission() {
                     </option>
                   ))} 
                 </select>
-
-              </div>
-
-              {/* GROSS COMMISSION */}
-              <div>
-
-                <label className="text-sm font-medium text-gray-600 mb-2 block">
-                  Voucher Gross Commission
-                </label>
-
-                <input
-                  type="text"
-                  value={voucherGrossAmount}
-                  onChange={(e) => setVoucherGrossAmount(e.target.value)}
-                  placeholder="Overall gross commission"
-                  className="
-                    w-full
-                    border
-                    border-gray-300
-                    rounded-xl
-                    px-4
-                    py-3
-                    outline-none
-                    focus:ring-2
-                    focus:ring-[#0d1b4c]
-                  "
-                />
 
               </div>
 
@@ -713,9 +756,12 @@ function Commission() {
             </div>
 
             {/* UPLOAD BUTTON */}
-            <div className="flex justify-center mt-6">
+            <div className="mt-6 grid gap-4 md:grid-cols-[auto_1fr] md:items-end">
               <label
                 className="
+                  inline-flex
+                  items-center
+                  justify-center
                   bg-[#0d1b4c]
                   hover:bg-[#09122f]
                   text-white
@@ -726,7 +772,7 @@ function Commission() {
                   shadow-lg
                   transition-all
                   cursor-pointer
-                "
+                  "
               >
                 Upload Voucher
                 <input
@@ -736,6 +782,30 @@ function Commission() {
                   className="hidden"
                 />
               </label>
+
+              <div>
+                <label className="text-sm font-medium text-gray-600 mb-2 block">
+                  Overall Gross Commission
+                </label>
+
+                <input
+                  type="text"
+                  value={voucherGrossAmount}
+                  onChange={(e) => setVoucherGrossAmount(e.target.value)}
+                  placeholder="Total gross commission per voucher"
+                  className="
+                    w-full
+                    border
+                    border-gray-300
+                    rounded-xl
+                    px-4
+                    py-3
+                    outline-none
+                    focus:ring-2
+                    focus:ring-[#0d1b4c]
+                  "
+                />
+              </div>
 
             </div>
 
@@ -749,11 +819,11 @@ function Commission() {
           <div>
 
             <h2 className="text-2xl font-bold text-[#0d1b4c]">
-              Release Records
+              Voucher Buyers
             </h2>
 
             <p className="text-gray-500 text-sm mt-1">
-              List of submitted commission vouchers.
+              Buyers added to this voucher before calculation.
             </p>
 
           </div>
@@ -778,6 +848,16 @@ function Commission() {
 
         </div>
 
+        <div className="mb-5 grid gap-4 md:grid-cols-3">
+          <SummaryTile label="Voucher Gross" value={`P${voucherGrossTotal.toLocaleString()}`} />
+          <SummaryTile label="Assigned to Buyers" value={`P${buyerAssignedTotal.toLocaleString()}`} />
+          <SummaryTile
+            label={voucherBalance === 0 ? "Tallied" : "Remaining Buyer Amount"}
+            value={`P${voucherBalance.toLocaleString()}`}
+            valueClass={isVoucherTallied ? "text-emerald-700" : "text-orange-600"}
+          />
+        </div>
+
         {/* TABLE */}
         <div className="overflow-x-auto rounded-2xl border border-gray-200">
 
@@ -791,8 +871,8 @@ function Commission() {
                 <th className="p-5">Buyer</th>
                 <th className="p-5">Project</th>
                 <th className="p-5">Phase / Block / Lot</th>
-                <th className="p-5">Gross Commission</th>
                 <th className="p-5">Buyer Amount</th>
+                <th className="p-5">Status</th>
                 <th className="p-5">Action</th>
 
               </tr>
@@ -854,12 +934,12 @@ function Commission() {
                     Phase {voucher.phase || "-"} / Block {voucher.block || "-"} / Lot {voucher.lot || "-"}
                   </td>
 
-                  <td className="p-5 font-bold text-[#0d1b4c]">
-                    P{getNumber(voucher.amount).toLocaleString()}
-                  </td>
-
                   <td className="p-5 font-bold text-emerald-700">
                     P{getNumber(voucher.commissionAmount).toLocaleString()}
+                  </td>
+
+                  <td className="p-5">
+                    <StatusBadge status={voucher.computationStatus} />
                   </td>
 
                   <td className="p-5">
@@ -914,6 +994,18 @@ function Commission() {
 
             </tbody>
 
+            <tfoot>
+              <tr className="bg-[#f3f4f6] font-bold text-[#0d1b4c]">
+                <td className="p-5" colSpan="4">Total Buyer Amount</td>
+                <td className="p-5 text-emerald-700">
+                  P{buyerAssignedTotal.toLocaleString()}
+                </td>
+                <td className="p-5" colSpan="2">
+                  {isVoucherTallied ? "Tallied with gross commission" : "Needs more buyer amount"}
+                </td>
+              </tr>
+            </tfoot>
+
           </table>
 
         </div>
@@ -939,7 +1031,7 @@ function Commission() {
           </button>
 
           <button
-            onClick={clearForm}
+            onClick={resetVoucherSession}
             className="
               bg-gray-200
               hover:bg-gray-300
@@ -963,4 +1055,31 @@ function Commission() {
 }
 
 export default Commission
+
+function SummaryTile({ label, value, valueClass = "text-[#0d1b4c]" }) {
+  return (
+    <div className="rounded-2xl bg-[#f5f6fa] p-4">
+      <p className="text-sm font-semibold text-gray-500">{label}</p>
+      <p className={`mt-1 text-xl font-black ${valueClass}`}>{value}</p>
+    </div>
+  );
+}
+
+function StatusBadge({ status = "Pending" }) {
+  const done = status === "Done";
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+        done ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
+      }`}
+    >
+      {done ? "Done" : "Pending"}
+    </span>
+  );
+}
+
+function createVoucherBatchId() {
+  return `V-${Date.now()}`;
+}
 

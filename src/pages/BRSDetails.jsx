@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   collection,
@@ -10,31 +10,47 @@ import {
 
 import { db } from "../firebase";
 
-function BRSDetails({ setActivePage }) {
+function BRSDetails({ selectedBRSId, setActivePage }) {
   const navigate = useNavigate();
   const { id } = useParams();
+  const recordId = selectedBRSId || id;
   const [record, setRecord] = useState(null);
   const [vouchers, setVouchers] = useState([]);
-  const [loading, setLoading] = useState(Boolean(id));
+  const [loading, setLoading] = useState(Boolean(recordId));
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
+  const [statusDraft, setStatusDraft] = useState("For Approval");
   const [formData, setFormData] = useState({});
   const [rateDistribution, setRateDistribution] = useState([]);
+  const editingRef = useRef(false);
 
   useEffect(() => {
-    if (!id) {
+    editingRef.current = editing;
+  }, [editing]);
+
+  useEffect(() => {
+    if (!recordId) {
       return undefined;
     }
 
     const unsubscribe = onSnapshot(
-      doc(db, "brs", id),
+      doc(db, "brs", recordId),
       (snapshot) => {
-        setRecord(
-          snapshot.exists()
-            ? { id: snapshot.id, ...snapshot.data() }
-            : null
-        );
+        const nextRecord = snapshot.exists()
+          ? { id: snapshot.id, ...snapshot.data() }
+          : null;
+
+        setRecord(nextRecord);
+        setStatusDraft(nextRecord?.status || "For Approval");
+        if (nextRecord && !editingRef.current) {
+          setFormData(createEditableRecord(nextRecord));
+          setRateDistribution(
+            Array.isArray(nextRecord.rateDistribution)
+              ? nextRecord.rateDistribution
+              : []
+          );
+        }
         setLoading(false);
       },
       (error) => {
@@ -45,10 +61,10 @@ function BRSDetails({ setActivePage }) {
     );
 
     return () => unsubscribe();
-  }, [id]);
+  }, [recordId]);
 
   useEffect(() => {
-    if (!id) {
+    if (!recordId) {
       return undefined;
     }
 
@@ -60,7 +76,7 @@ function BRSDetails({ setActivePage }) {
             id: item.id,
             ...item.data(),
           }))
-          .filter((item) => item.brsDocId === id)
+          .filter((item) => item.brsDocId === recordId)
           .sort((a, b) => {
             const dateA =
               a.createdAt?.toMillis?.() ||
@@ -81,21 +97,12 @@ function BRSDetails({ setActivePage }) {
     );
 
     return () => unsubscribe();
-  }, [id]);
+  }, [recordId]);
 
   const summary = useMemo(
     () => getPaymentSummary(editing ? formData : record, vouchers),
     [editing, formData, record, vouchers]
   );
-
-  useEffect(() => {
-    if (record && !editing) {
-      setFormData(createEditableRecord(record));
-      setRateDistribution(
-        Array.isArray(record.rateDistribution) ? record.rateDistribution : []
-      );
-    }
-  }, [editing, record]);
 
   const handleBack = () => {
     if (setActivePage) {
@@ -212,6 +219,13 @@ function BRSDetails({ setActivePage }) {
         status: value,
         updatedAt: serverTimestamp(),
       });
+
+      if (setActivePage) {
+        setActivePage("brs");
+        return;
+      }
+
+      navigate("/dashboard");
     } catch (error) {
       console.error(error);
       alert(error.message);
@@ -259,29 +273,39 @@ function BRSDetails({ setActivePage }) {
             <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">
               Status
             </label>
-            <select
-              value={record.status || "For Approval"}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              disabled={savingStatus}
-              className="
-                h-12
-                rounded-xl
-                border
-                border-gray-200
-                bg-white
-                px-4
-                font-semibold
-                text-[#0d1b4c]
-                outline-none
-                focus:ring-2
-                focus:ring-[#2563eb]
-                disabled:opacity-60
-              "
-            >
-              <option value="For Approval">For Approval</option>
-              <option value="Approved">Approved</option>
-              <option value="Hold">Hold</option>
-            </select>
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={statusDraft}
+                onChange={(e) => setStatusDraft(e.target.value)}
+                disabled={savingStatus}
+                className="
+                  h-12
+                  rounded-xl
+                  border
+                  border-gray-200
+                  bg-white
+                  px-4
+                  font-semibold
+                  text-[#0d1b4c]
+                  outline-none
+                  focus:ring-2
+                  focus:ring-[#2563eb]
+                  disabled:opacity-60
+                "
+              >
+                <option value="For Approval">For Approval</option>
+                <option value="Approved">Approved</option>
+                <option value="Hold">Hold</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => handleStatusChange(statusDraft)}
+                disabled={savingStatus || statusDraft === (record.status || "For Approval")}
+                className="h-12 rounded-xl bg-[#2563eb] px-5 font-semibold text-white shadow-lg hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {savingStatus ? "Saving..." : "Save"}
+              </button>
+            </div>
           </div>
 
           <button

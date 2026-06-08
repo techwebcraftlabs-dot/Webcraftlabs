@@ -7,7 +7,7 @@ import {
 
 import { db } from "../firebase";
 
-function BRS() {
+function BRS({ setActivePage, setSelectedBRSId }) {
   const navigate = useNavigate();
   const [brsRecords, setBrsRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +74,16 @@ function BRS() {
       "bg-rose-50 text-rose-700 border border-rose-200",
   };
 
+  const handleOpenDetails = (recordId) => {
+    if (setActivePage && setSelectedBRSId) {
+      setSelectedBRSId(recordId);
+      setActivePage("brs-details");
+      return;
+    }
+
+    navigate(`/brs-details/${recordId}`);
+  };
+
   return (
     <div className="flex-1 bg-[#f5f6fa] min-h-screen p-8">
       {/* HEADER */}
@@ -127,30 +137,30 @@ function BRS() {
             "
           />
 
-          <div className="flex flex-wrap gap-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="
+              h-12
+              rounded-xl
+              border
+              border-gray-200
+              bg-[#f5f6fa]
+              px-4
+              text-sm
+              font-semibold
+              text-[#0d1b4c]
+              outline-none
+              focus:ring-2
+              focus:ring-[#6c63ff]
+            "
+          >
             {["All", ...statusOptions].map((status) => (
-              <button
-                key={status}
-                type="button"
-                onClick={() => setStatusFilter(status)}
-                className={`
-                  rounded-xl
-                  px-4
-                  py-3
-                  text-sm
-                  font-semibold
-                  transition-all
-                  ${
-                    statusFilter === status
-                      ? "bg-[#0d1b4c] text-white shadow-md"
-                      : "bg-[#f5f6fa] text-gray-600 hover:bg-gray-100"
-                  }
-                `}
-              >
+              <option key={status} value={status}>
                 {status}
-              </button>
+              </option>
             ))}
-          </div>
+          </select>
         </div>
       </div>
 
@@ -196,7 +206,7 @@ function BRS() {
             {!loading && filteredRecords.map((record) => (
               <tr
                 key={record.id}
-                onClick={() => navigate(`/brs-details/${record.id}`)}
+                onClick={() => handleOpenDetails(record.id)}
                 className="
                   border-t
                   hover:bg-[#fafafa]
@@ -224,7 +234,7 @@ function BRS() {
                       rounded-full
                       text-sm
                       font-medium
-                      ${statusStyles[record.status]}
+                      ${statusStyles[record.status || "For Approval"]}
                     `}
                   >
                     {record.status || "For Approval"}

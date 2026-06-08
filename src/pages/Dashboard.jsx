@@ -16,7 +16,14 @@ import DeveloperVoucher from './DeveloperVoucher'
 function Dashboard() {
 
   const [activePage, setActivePage] =
-    useState('dashboard')
+    useState(() => {
+      const storedPage = localStorage.getItem('activeDashboardPage')
+      localStorage.removeItem('activeDashboardPage')
+      return storedPage || 'dashboard'
+    })
+
+  const [selectedBRSId, setSelectedBRSId] =
+    useState('')
 
   const [mobileMenu, setMobileMenu] =
     useState(false)
@@ -59,6 +66,7 @@ function Dashboard() {
           <div className="mt-8">
             <BRS
               setActivePage={setActivePage}
+              setSelectedBRSId={setSelectedBRSId}
             />
           </div>
         </>
@@ -71,6 +79,7 @@ function Dashboard() {
 
           <div className="mt-8">
             <BRSDetails
+              selectedBRSId={selectedBRSId}
               setActivePage={setActivePage}
             />
           </div>

@@ -1,6 +1,14 @@
-import { useState } from "react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { CheckCircle, Loader2, Save } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  addDoc,
+  collection,
+  doc,
+  onSnapshot,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
+import { ArrowLeft, CheckCircle, Eye, Loader2, Save } from "lucide-react";
 
 import { db } from "../firebase";
 
@@ -23,18 +31,36 @@ const incentiveLabels = {
 const peso = "\u20b1";
 
 function RateDistribution() {
+  const navigate = useNavigate();
   const [incentiveType, setIncentiveType] = useState("commission");
   const [deductionsByRow, setDeductionsByRow] = useState({});
+  const [computations, setComputations] = useState([]);
   const [savingComputation, setSavingComputation] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState("");
+  const [voucherBatchState, setVoucherBatchState] = useState(() =>
+    JSON.parse(localStorage.getItem("selectedVoucherBatch")) || null
+  );
 
-  const buyer = JSON.parse(localStorage.getItem("selectedBuyer")) || {};
+  const voucherBatch =
+    voucherBatchState;
+  const savedBuyer = JSON.parse(localStorage.getItem("selectedBuyer")) || null;
+  const [activeBuyer, setActiveBuyer] = useState(savedBuyer);
+  const buyer = activeBuyer || {};
   const grossAmount = Number(buyer.amount) || 0;
   const vatDeduction = grossAmount * 0.12;
   const netOfVat = grossAmount - vatDeduction;
   const savedDistribution = Array.isArray(buyer.rateDistribution)
     ? buyer.rateDistribution
     : [];
+
+  useEffect(() => {
+    const unsubscribe = onSnapshotCollection(
+      "commissionComputations",
+      setComputations
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   const normalizeRole = (person) => person.role?.trim().toLowerCase() || "";
   const isAssistHlcRole = (role) =>
@@ -82,7 +108,9 @@ function RateDistribution() {
     );
   });
 
-  const incentiveDeveloperRate = distributionData.reduce(
+  const combinedDistributionData = combineDistributionByName(distributionData);
+
+  const incentiveDeveloperRate = combinedDistributionData.reduce(
     (total, person) => total + (Number(person.rate) || 0),
     0
   );
@@ -93,8 +121,82 @@ function RateDistribution() {
   const formatCurrency = (value) =>
     `${peso}${Number(value || 0).toLocaleString()}`;
 
+  const batchBuyers = Array.isArray(voucherBatch?.buyers)
+    ? voucherBatch.buyers
+    : [];
+  const batchGrossAmount = Number(voucherBatch?.voucherGrossAmount) || 0;
+  const batchAssignedTotal = batchBuyers.reduce(
+    (total, item) => total + (Number(item.commissionAmount) || 0),
+    0
+  );
+  const batchBalance = batchGrossAmount - batchAssignedTotal;
+  const allBatchBuyersDone =
+    batchBuyers.length > 0 &&
+    batchBuyers.every((voucher) => voucher.computationStatus === "Done");
+
+  const handleViewBatchBuyer = (voucher) => {
+    const brsRecord = voucher.brsRecord || {};
+    const nextBuyer = {
+      ...brsRecord,
+      selectedVoucherId: voucher.id || "",
+      voucherBatchId: voucher.voucherBatchId || voucherBatch?.voucherBatchId || "",
+      voucherNo: voucher.voucherNo || voucherBatch?.voucherNo || "",
+      voucherDate: voucher.voucherDate || voucherBatch?.voucherDate || "",
+      voucherRemarks: voucher.remarks || "",
+      buyerName: voucher.buyer || brsRecord.buyer,
+      amount: Number(voucher.commissionAmount) || 0,
+    };
+
+    localStorage.setItem("selectedBuyer", JSON.stringify(nextBuyer));
+    setActiveBuyer(nextBuyer);
+    setDeductionsByRow({});
+    setLastSavedAt("");
+  };
+
+  const handleBackToBatch = () => {
+    localStorage.removeItem("selectedBuyer");
+    setActiveBuyer(null);
+    setDeductionsByRow({});
+    setLastSavedAt("");
+  };
+
+  const handleFinishBatch = () => {
+    if (!allBatchBuyersDone) {
+      alert("Please save the computation for every buyer first.");
+      return;
+    }
+
+    localStorage.removeItem("selectedBuyer");
+    localStorage.removeItem("selectedVoucherBatch");
+    localStorage.setItem("activeDashboardPage", "commission");
+    navigate("/dashboard");
+  };
+
   const getRowKey = (person, index) =>
     `${normalizeRole(person)}-${person.name || ""}-${index}`;
+
+  const selectedComputation = findSavedComputation(
+    computations,
+    buyer,
+    incentiveType
+  );
+
+  useEffect(() => {
+    if (!activeBuyer) {
+      setDeductionsByRow({});
+      return;
+    }
+
+    if (!selectedComputation) {
+      setDeductionsByRow({});
+      return;
+    }
+
+    setDeductionsByRow(
+      buildSavedDeductions(selectedComputation.rows || [], getRowKey)
+    );
+    setLastSavedAt("");
+  }, [activeBuyer, selectedComputation]);
 
   const getDeductions = (rowKey) => deductionsByRow[rowKey] || {};
 
@@ -115,7 +217,7 @@ function RateDistribution() {
     setLastSavedAt("");
   };
 
-  const computedRows = distributionData.map((person, index) => {
+  const computedRows = combinedDistributionData.map((person, index) => {
     const rowKey = getRowKey(person, index);
     const rate = Number(person.rate) || 0;
     const forRelease = developerRate ? netOfVat * (rate / developerRate) : 0;
@@ -165,10 +267,12 @@ function RateDistribution() {
     try {
       setSavingComputation(true);
 
-      await addDoc(collection(db, "commissionComputations"), {
+      const computationData = {
         brsDocId: buyer.id || buyer.brsDocId || "",
         brsId: buyer.brsId || "",
         selectedVoucherId: buyer.selectedVoucherId || "",
+        voucherBatchId: buyer.voucherBatchId || "",
+        voucherNo: buyer.voucherNo || "",
         buyer: buyer.buyerName || buyer.buyer || "",
         developer: buyer.developer || "",
         project: buyer.project || "",
@@ -185,6 +289,7 @@ function RateDistribution() {
           net: totalNet,
         },
         rows: computedRows.map((row) => ({
+          rowKey: row.rowKey,
           name: row.person.name || row.person.role || "",
           role: row.person.role || "",
           grossAmount,
@@ -207,10 +312,47 @@ function RateDistribution() {
           netAmount: row.netAmount,
         })),
         createdAt: serverTimestamp(),
-      });
+        updatedAt: serverTimestamp(),
+      };
+
+      if (selectedComputation?.id) {
+        await updateDoc(
+          doc(db, "commissionComputations", selectedComputation.id),
+          computationData
+        );
+      } else {
+        await addDoc(collection(db, "commissionComputations"), computationData);
+      }
+
+      if (buyer.selectedVoucherId) {
+        await updateDoc(doc(db, "commissionVouchers", buyer.selectedVoucherId), {
+          computationStatus: "Done",
+          computedAt: serverTimestamp(),
+        });
+      }
+
+      if (voucherBatch?.buyers?.length) {
+        const nextBatch = {
+          ...voucherBatch,
+          buyers: voucherBatch.buyers.map((voucher) =>
+            voucher.id === buyer.selectedVoucherId
+              ? {
+                  ...voucher,
+                  computationStatus: "Done",
+                }
+              : voucher
+          ),
+        };
+
+        setVoucherBatchState(nextBatch);
+        localStorage.setItem("selectedVoucherBatch", JSON.stringify(nextBatch));
+      }
 
       setLastSavedAt(new Date().toLocaleTimeString());
       alert("Computation saved successfully.");
+      if (voucherBatch?.buyers?.length) {
+        handleBackToBatch();
+      }
     } catch (error) {
       console.error(error);
       alert(error.message);
@@ -234,10 +376,106 @@ function RateDistribution() {
     focus:ring-blue-100
   `;
 
+  if (batchBuyers.length > 0 && !activeBuyer) {
+    return (
+      <section className="min-h-screen bg-[#f4f6fb] p-6 lg:p-8">
+        <div className="mb-8">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+            Voucher Calculation
+          </p>
+          <h1 className="mt-2 text-4xl font-black text-[#0d1b4c]">
+            Buyer Computation List
+          </h1>
+          <p className="mt-2 text-gray-500">
+            Open each buyer to adjust deductions and save their computation.
+          </p>
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleFinishBatch}
+            disabled={!allBatchBuyersDone}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#0d1b4c] px-6 py-3 text-sm font-black text-white shadow-lg transition disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none"
+          >
+            <Save className="h-4 w-4" />
+            Save Voucher
+          </button>
+        </div>
+
+        <div className="mb-8 grid gap-5 md:grid-cols-3">
+          <SummaryCard label="Voucher Gross Commission" value={formatCurrency(batchGrossAmount)} />
+          <SummaryCard label="Total Buyer Amount" value={formatCurrency(batchAssignedTotal)} />
+          <SummaryCard
+            label="Balance"
+            value={formatCurrency(batchBalance)}
+            valueClass={batchBalance === 0 ? "text-green-600" : "text-orange-500"}
+          />
+        </div>
+
+        <div className="overflow-x-auto rounded-3xl bg-white shadow-xl shadow-slate-300/70">
+          <table className="w-full min-w-[900px]">
+            <thead>
+              <tr className="bg-[#0d1b4c] text-left text-sm text-white">
+                <th className="p-4">BRS</th>
+                <th className="p-4">Buyer</th>
+                <th className="p-4">Project</th>
+                <th className="p-4">Phase / Block / Lot</th>
+                <th className="p-4">Buyer Gross Comm</th>
+                <th className="p-4">Status</th>
+                <th className="p-4">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {batchBuyers.map((voucher) => (
+                <tr key={voucher.id} className="border-b border-slate-200">
+                  <td className="p-4 font-bold text-[#0d1b4c]">
+                    {voucher.brsId || "-"}
+                  </td>
+                  <td className="p-4 font-semibold">{voucher.buyer || "-"}</td>
+                  <td className="p-4">{voucher.project || "-"}</td>
+                  <td className="p-4">
+                    Phase {voucher.phase || "-"} / Block {voucher.block || "-"} / Lot {voucher.lot || "-"}
+                  </td>
+                  <td className="p-4 font-black text-emerald-700">
+                    {formatCurrency(voucher.commissionAmount)}
+                  </td>
+                  <td className="p-4">
+                    <StatusBadge status={voucher.computationStatus} />
+                  </td>
+                  <td className="p-4">
+                    <button
+                      type="button"
+                      onClick={() => handleViewBatchBuyer(voucher)}
+                      className="inline-flex items-center gap-2 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white"
+                    >
+                      <Eye className="h-4 w-4" />
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="min-h-screen bg-[#f4f6fb] p-6 lg:p-8">
       <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
+          {batchBuyers.length > 0 && (
+            <button
+              type="button"
+              onClick={handleBackToBatch}
+              className="mb-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-[#0d1b4c] shadow-sm"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Buyer List
+            </button>
+          )}
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
             {incentiveLabels[incentiveType]}
           </p>
@@ -442,6 +680,127 @@ function SummaryCard({ label, value, valueClass = "text-[#0d1b4c]" }) {
       <h1 className={`mt-2 text-3xl font-black ${valueClass}`}>{value}</h1>
     </div>
   );
+}
+
+function StatusBadge({ status = "Pending" }) {
+  const done = status === "Done";
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+        done ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
+      }`}
+    >
+      {done ? "Done" : "Pending"}
+    </span>
+  );
+}
+
+function onSnapshotCollection(collectionName, setRecords) {
+  return onSnapshot(
+    collection(db, collectionName),
+    (snapshot) => {
+      setRecords(
+        snapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }))
+      );
+    },
+    (error) => {
+      console.error(error);
+      alert(error.message);
+    }
+  );
+}
+
+function findSavedComputation(computations, buyer, incentiveType) {
+  if (!buyer?.selectedVoucherId && !buyer?.id && !buyer?.brsDocId) {
+    return null;
+  }
+
+  const buyerDocId = buyer.id || buyer.brsDocId || "";
+  const matches = computations.filter((item) => {
+    const sameIncentive = (item.incentiveType || "commission") === incentiveType;
+    const sameVoucher = buyer.selectedVoucherId
+      ? item.selectedVoucherId === buyer.selectedVoucherId
+      : true;
+    const sameBatchBuyer =
+      item.voucherBatchId &&
+      item.voucherBatchId === buyer.voucherBatchId &&
+      item.brsDocId === buyerDocId;
+    const sameBuyer = item.brsDocId === buyerDocId;
+
+    return (
+      sameIncentive &&
+      (sameVoucher || sameBatchBuyer || (!buyer.selectedVoucherId && sameBuyer))
+    );
+  });
+
+  return matches.sort((a, b) => getMillis(b) - getMillis(a))[0] || null;
+}
+
+function buildSavedDeductions(rows, getRowKey) {
+  return rows.reduce((saved, row, index) => {
+    const rowKey = row.rowKey || getRowKey(row, index);
+
+    saved[rowKey] = {
+      savings: Number(row.deductions?.savings) || "",
+      ca: Number(row.deductions?.ca) || "",
+      marketing: Number(row.deductions?.marketing) || "",
+      ayuda: Number(row.deductions?.ayuda) || "",
+      others: Number(row.deductions?.others) || "",
+      zonalCare: Number(row.deductions?.zonalCare) || "",
+    };
+
+    return saved;
+  }, {});
+}
+
+function getMillis(item) {
+  return (
+    item.updatedAt?.toMillis?.() ||
+    item.createdAt?.toMillis?.() ||
+    new Date(item.updatedAt || item.createdAt || 0).getTime()
+  );
+}
+
+function combineDistributionByName(distribution) {
+  const grouped = new Map();
+
+  distribution.forEach((person) => {
+    const name = String(person.name || person.role || "").trim();
+    const key = name.toLowerCase();
+    const role = String(person.role || "").trim();
+    const rate = Number(person.rate) || 0;
+
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        ...person,
+        name,
+        role,
+        rate,
+        taxable: Boolean(person.taxable),
+        roles: role ? [role] : [],
+      });
+      return;
+    }
+
+    const current = grouped.get(key);
+    const roles = role && !current.roles.includes(role)
+      ? [...current.roles, role]
+      : current.roles;
+
+    grouped.set(key, {
+      ...current,
+      role: roles.join(" / "),
+      roles,
+      rate: current.rate + rate,
+      taxable: Boolean(current.taxable || person.taxable),
+    });
+  });
+
+  return Array.from(grouped.values());
 }
 
 export default RateDistribution;
