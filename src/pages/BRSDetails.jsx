@@ -4,6 +4,8 @@ import {
   collection,
   doc,
   onSnapshot,
+  serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
 
 import { db } from "../firebase";
@@ -14,6 +16,10 @@ function BRSDetails({ setActivePage }) {
   const [record, setRecord] = useState(null);
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(Boolean(id));
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({});
+  const [rateDistribution, setRateDistribution] = useState([]);
 
   useEffect(() => {
     if (!id) {
@@ -77,9 +83,18 @@ function BRSDetails({ setActivePage }) {
   }, [id]);
 
   const summary = useMemo(
-    () => getPaymentSummary(record, vouchers),
-    [record, vouchers]
+    () => getPaymentSummary(editing ? formData : record, vouchers),
+    [editing, formData, record, vouchers]
   );
+
+  useEffect(() => {
+    if (record && !editing) {
+      setFormData(createEditableRecord(record));
+      setRateDistribution(
+        Array.isArray(record.rateDistribution) ? record.rateDistribution : []
+      );
+    }
+  }, [editing, record]);
 
   const handleBack = () => {
     if (setActivePage) {
@@ -90,21 +105,98 @@ function BRSDetails({ setActivePage }) {
     navigate(-1);
   };
 
-  const handleProceedToCommission = () => {
+  const handleEdit = () => {
     if (!record) {
       return;
     }
 
-    localStorage.setItem(
-      "selectedBuyer",
-      JSON.stringify({
-        ...record,
-        buyerName: record.buyer,
-        amount: getRecordAmount(record),
-      })
+    setFormData(createEditableRecord(record));
+    setRateDistribution(
+      Array.isArray(record.rateDistribution) ? record.rateDistribution : []
     );
+    setEditing(true);
+  };
 
-    navigate("/RateDistribution");
+  const handleCancelEdit = () => {
+    setFormData(createEditableRecord(record));
+    setRateDistribution(
+      Array.isArray(record.rateDistribution) ? record.rateDistribution : []
+    );
+    setEditing(false);
+  };
+
+  const handleChange = (e) => {
+    const { name, type, checked, value } = e.target;
+
+    setFormData((current) => ({
+      ...current,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleRateChange = (index, field, value) => {
+    setRateDistribution((currentRows) =>
+      currentRows.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, [field]: value } : row
+      )
+    );
+  };
+
+  const handleAddRateRow = () => {
+    setRateDistribution((currentRows) => [
+      ...currentRows,
+      {
+        role: "",
+        name: "",
+        rate: "",
+      },
+    ]);
+  };
+
+  const handleRemoveRateRow = (index) => {
+    setRateDistribution((currentRows) =>
+      currentRows.filter((_, rowIndex) => rowIndex !== index)
+    );
+  };
+
+  const handleSaveEdit = async () => {
+    if (!record?.id) {
+      return;
+    }
+
+    if (!formData.brsId || !formData.buyer || !formData.project) {
+      alert("Please fill out BRS No., Buyer, and Project.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      await updateDoc(doc(db, "brs", record.id), {
+        ...formData,
+        amountDue: Number(cleanNumber(formData.amountDue)) || 0,
+        developerDeductions:
+          Number(cleanNumber(formData.developerDeductions)) || 0,
+        rateDistribution: rateDistribution
+          .filter((row) => row.role || row.name || row.rate)
+          .map((row) => ({
+            ...row,
+            rate: Number(row.rate) || 0,
+            taxable: !["developer", "zonal"].includes(
+              String(row.role || "").toLowerCase()
+            ),
+          })),
+        updatedAt: serverTimestamp(),
+      });
+
+      setEditing(false);
+      alert("BRS updated successfully.");
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -127,6 +219,8 @@ function BRSDetails({ setActivePage }) {
     );
   }
 
+  const details = editing ? formData : record;
+
   return (
     <section className="bg-[#f4f7fb] min-h-screen p-8">
       <div className="flex items-center justify-between mb-8">
@@ -147,84 +241,129 @@ function BRSDetails({ setActivePage }) {
             Back
           </button>
           <button
-            onClick={handleProceedToCommission}
-            className="bg-[#0d1b4c] hover:bg-[#09122f] text-white px-6 py-3 rounded-xl font-semibold shadow-lg"
+            onClick={editing ? handleSaveEdit : handleEdit}
+            disabled={saving}
+            className="bg-[#0d1b4c] hover:bg-[#09122f] text-white px-6 py-3 rounded-xl font-semibold shadow-lg disabled:opacity-60"
           >
-            Proceed to Commission
+            {editing ? (saving ? "Saving..." : "Save Changes") : "Edit"}
           </button>
+          {editing && (
+            <button
+              onClick={handleCancelEdit}
+              disabled={saving}
+              className="bg-white hover:bg-gray-50 px-6 py-3 rounded-xl font-semibold border border-gray-200 disabled:opacity-60"
+            >
+              Cancel
+            </button>
+          )}
         </div>
       </div>
 
       <DetailsSection title="BUYER'S REGISTRATION SHEET">
-        <Input label="Tripping Date" value={record.trippingDate} />
-        <Input label="Closing Date" value={record.closedAt} />
-        <Input label="Posted" value={record.postedAt} />
-        <Input label="HLC Code" value={record.hlcCode} />
-        <Input label="Team Name" value={record.teamName} />
+        <Input label="BRS No." name="brsId" value={details.brsId} editing={editing} onChange={handleChange} />
+        <Input label="Tripping Date" name="trippingDate" value={details.trippingDate} editing={editing} onChange={handleChange} />
+        <Input label="Closing Date" name="closedAt" value={details.closedAt} editing={editing} onChange={handleChange} />
+        <Input label="Posted" name="postedAt" value={details.postedAt} editing={editing} onChange={handleChange} />
+        <Input label="HLC Code" name="hlcCode" value={details.hlcCode} editing={editing} onChange={handleChange} />
+        <Input label="Team Name" name="teamName" value={details.teamName} editing={editing} onChange={handleChange} />
       </DetailsSection>
 
       <DetailsSection title="BUYER'S INFORMATION">
-        <Input label="Full Name" value={record.buyer} />
-        <Input label="Address" value={record.buyerAddress} />
-        <Input label="Mobile" value={record.buyerMobile} />
-        <Input label="Email" value={record.buyerEmail} />
-        <Input label="Birthdate" value={record.buyerBirthdate} />
-        <Input label="Age" value={record.buyerAge} />
+        <Input label="Full Name" name="buyer" value={details.buyer} editing={editing} onChange={handleChange} />
+        <Input label="Address" name="buyerAddress" value={details.buyerAddress} editing={editing} onChange={handleChange} />
+        <Input label="Mobile" name="buyerMobile" value={details.buyerMobile} editing={editing} onChange={handleChange} />
+        <Input label="Email" name="buyerEmail" value={details.buyerEmail} editing={editing} onChange={handleChange} />
+        <Input label="Birthdate" name="buyerBirthdate" value={details.buyerBirthdate} editing={editing} onChange={handleChange} />
+        <Input label="Age" name="buyerAge" value={details.buyerAge} editing={editing} onChange={handleChange} />
       </DetailsSection>
 
       <DetailsSection title="PROPERTY DETAILS">
-        <Input label="Developer" value={record.developer} />
-        <Input label="Project" value={record.project} />
-        <Input label="LTS" value={record.lts} />
-        <Input label="Project Location" value={record.projectLocation} />
-        <Input label="Direct" value={record.direct} />
-        <Input label="Phase" value={record.phase} />
-        <Input label="Block" value={record.block} />
-        <Input label="Lot" value={record.lot} />
-        <Input label="Lot Area (SQM)" value={record.lotArea} />
-        <Input label="Floor Area (SQM)" value={record.floorArea} />
-        <Input label="Model Unit" value={record.modelUnit} />
+        <Input label="Developer" name="developer" value={details.developer} editing={editing} onChange={handleChange} />
+        <Input label="Project" name="project" value={details.project} editing={editing} onChange={handleChange} />
+        <Input label="LTS" name="lts" value={details.lts} editing={editing} onChange={handleChange} />
+        <Input label="Project Location" name="projectLocation" value={details.projectLocation} editing={editing} onChange={handleChange} />
+        <Input label="Direct" name="direct" value={details.direct} editing={editing} onChange={handleChange} />
+        <Input label="Phase" name="phase" value={details.phase} editing={editing} onChange={handleChange} />
+        <Input label="Block" name="block" value={details.block} editing={editing} onChange={handleChange} />
+        <Input label="Lot" name="lot" value={details.lot} editing={editing} onChange={handleChange} />
+        <Input label="Lot Area (SQM)" name="lotArea" value={details.lotArea} editing={editing} onChange={handleChange} />
+        <Input label="Floor Area (SQM)" name="floorArea" value={details.floorArea} editing={editing} onChange={handleChange} />
+        <Input label="Model Unit" name="modelUnit" value={details.modelUnit} editing={editing} onChange={handleChange} />
       </DetailsSection>
 
       <DetailsSection title="ACCOUNT DETAILS">
-        <Input label="TCP" value={formatCurrency(getNumber(record.tcp))} />
-        <Input label="Total DP" value={formatCurrency(getNumber(record.totalDp))} />
-        <Input label="Financing Scheme" value={record.financingScheme} />
-        <Input label="NSP" value={formatCurrency(getNumber(record.nsp))} />
-        <Input label="Reservation" value={formatCurrency(getNumber(record.reservation))} />
-        <Input label="Payment Terms" value={record.paymentTerms} />
-        <Input label="Loan Value" value={formatCurrency(getNumber(record.loanValue))} />
-        <Input label="Monthly DP" value={formatCurrency(getNumber(record.monthlyDp))} />
-        <Input label="Monthly Amortization" value={formatCurrency(getNumber(record.monthlyAmortization))} />
+        <Input label="TCP" name="tcp" value={editing ? details.tcp : formatCurrency(getNumber(details.tcp))} editing={editing} onChange={handleChange} />
+        <Input label="Total DP" name="totalDp" value={editing ? details.totalDp : formatCurrency(getNumber(details.totalDp))} editing={editing} onChange={handleChange} />
+        <Input label="Financing Scheme" name="financingScheme" value={details.financingScheme} editing={editing} onChange={handleChange} />
+        <Input label="NSP" name="nsp" value={editing ? details.nsp : formatCurrency(getNumber(details.nsp))} editing={editing} onChange={handleChange} />
+        <Input label="Reservation" name="reservation" value={editing ? details.reservation : formatCurrency(getNumber(details.reservation))} editing={editing} onChange={handleChange} />
+        <Input label="Payment Terms" name="paymentTerms" value={details.paymentTerms} editing={editing} onChange={handleChange} />
+        <Input label="Loan Value" name="loanValue" value={editing ? details.loanValue : formatCurrency(getNumber(details.loanValue))} editing={editing} onChange={handleChange} />
+        <Input label="Monthly DP" name="monthlyDp" value={editing ? details.monthlyDp : formatCurrency(getNumber(details.monthlyDp))} editing={editing} onChange={handleChange} />
+        <Input label="Monthly Amortization" name="monthlyAmortization" value={editing ? details.monthlyAmortization : formatCurrency(getNumber(details.monthlyAmortization))} editing={editing} onChange={handleChange} />
       </DetailsSection>
 
       <DetailsSection title="RATE DISTRIBUTION">
-        {(record.rateDistribution || []).map((row, index) => (
-          <Input
-            key={`${row.role}-${index}`}
-            label={row.role}
-            value={`${row.rate || 0}${row.name ? ` - ${row.name}` : ""}`}
-          />
-        ))}
+        {(editing ? rateDistribution : record.rateDistribution || []).map((row, index) =>
+          editing ? (
+            <RateDistributionInput
+              key={`${row.role}-${index}`}
+              row={row}
+              onChange={(field, value) => handleRateChange(index, field, value)}
+              onRemove={() => handleRemoveRateRow(index)}
+            />
+          ) : (
+            <Input
+              key={`${row.role}-${index}`}
+              label={row.role}
+              value={`${row.rate || 0}${row.name ? ` - ${row.name}` : ""}`}
+            />
+          )
+        )}
+        {editing && (
+          <button
+            type="button"
+            onClick={handleAddRateRow}
+            className="h-12 self-end rounded-xl bg-[#2563eb] px-5 font-semibold text-white"
+          >
+            Add Rate Row
+          </button>
+        )}
       </DetailsSection>
 
       <div className="bg-white rounded-3xl shadow-lg p-8 mb-8">
         <label className="flex items-center gap-3 mb-3 font-medium text-gray-700">
-          <input type="checkbox" checked={Boolean(record.wrongInput)} readOnly />
+          <input
+            type="checkbox"
+            name="wrongInput"
+            checked={Boolean(details.wrongInput)}
+            readOnly={!editing}
+            onChange={handleChange}
+          />
           Wrong Input
         </label>
         <Label>Notes</Label>
         <textarea
           rows="5"
-          value={record.notes || ""}
-          readOnly
-          className="w-full border border-gray-300 rounded-2xl p-5 outline-none resize-none bg-gray-50"
+          name="notes"
+          value={details.notes || ""}
+          readOnly={!editing}
+          onChange={handleChange}
+          className={`w-full border border-gray-300 rounded-2xl p-5 outline-none resize-none ${
+            editing ? "bg-white focus:ring-2 focus:ring-[#2563eb]" : "bg-gray-50"
+          }`}
         />
       </div>
 
       <div className="bg-white rounded-3xl shadow-lg p-8 mb-8">
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-5">
-          <Input label="Amount Due" value={formatCurrency(summary.amountDue)} />
+          <Input
+            label="Amount Due"
+            name="amountDue"
+            value={editing ? details.amountDue : formatCurrency(summary.amountDue)}
+            editing={editing}
+            onChange={handleChange}
+          />
           <Input label="Received" value={formatCurrency(summary.received)} />
           <Input
             label="Received %"
@@ -232,7 +371,14 @@ function BRSDetails({ setActivePage }) {
           />
           <Input
             label="Developer Deductions"
-            value={formatCurrency(summary.developerDeductions)}
+            name="developerDeductions"
+            value={
+              editing
+                ? details.developerDeductions
+                : formatCurrency(summary.developerDeductions)
+            }
+            editing={editing}
+            onChange={handleChange}
           />
           <Input label="Balance" value={formatCurrency(summary.balance)} />
         </div>
@@ -282,6 +428,52 @@ function BRSDetails({ setActivePage }) {
 
 function getNumber(value) {
   return Number(String(value || "").replace(/,/g, "")) || 0;
+}
+
+function cleanNumber(value) {
+  return String(value || "").replace(/,/g, "");
+}
+
+function createEditableRecord(record = {}) {
+  return {
+    brsId: record.brsId || "",
+    trippingDate: record.trippingDate || "",
+    closedAt: record.closedAt || "",
+    postedAt: record.postedAt || "",
+    hlcCode: record.hlcCode || "",
+    teamName: record.teamName || "",
+    buyer: record.buyer || "",
+    buyerAddress: record.buyerAddress || "",
+    buyerMobile: record.buyerMobile || "",
+    buyerEmail: record.buyerEmail || "",
+    buyerBirthdate: record.buyerBirthdate || "",
+    buyerAge: record.buyerAge || "",
+    developer: record.developer || "",
+    project: record.project || "",
+    lts: record.lts || "",
+    projectLocation: record.projectLocation || "",
+    direct: record.direct || "",
+    phase: record.phase || "",
+    block: record.block || "",
+    lot: record.lot || "",
+    lotArea: record.lotArea || "",
+    floorArea: record.floorArea || "",
+    modelUnit: record.modelUnit || "",
+    tcp: record.tcp || "",
+    totalDp: record.totalDp || "",
+    financingScheme: record.financingScheme || "",
+    nsp: record.nsp || "",
+    reservation: record.reservation || "",
+    paymentTerms: record.paymentTerms || "",
+    loanValue: record.loanValue || "",
+    monthlyDp: record.monthlyDp || "",
+    monthlyAmortization: record.monthlyAmortization || "",
+    wrongInput: Boolean(record.wrongInput),
+    notes: record.notes || "",
+    amountDue: record.amountDue || "",
+    developerDeductions: record.developerDeductions || "",
+    status: record.status || "For Approval",
+  };
 }
 
 function getRecordAmount(record) {
@@ -356,15 +548,65 @@ function Label({ children }) {
   );
 }
 
-function Input({ label, value }) {
+function RateDistributionInput({ row, onChange, onRemove }) {
+  return (
+    <div>
+      <Label>Rate Distribution</Label>
+      <div className="grid grid-cols-[1fr_1fr_90px] gap-2">
+        <input
+          type="text"
+          value={row.role || ""}
+          onChange={(e) => onChange("role", e.target.value)}
+          placeholder="Role"
+          className="h-12 min-w-0 rounded-xl border border-gray-300 px-3 outline-none focus:ring-2 focus:ring-[#2563eb]"
+        />
+        <input
+          type="text"
+          value={row.name || ""}
+          onChange={(e) => onChange("name", e.target.value)}
+          placeholder="Name"
+          className="h-12 min-w-0 rounded-xl border border-gray-300 px-3 outline-none focus:ring-2 focus:ring-[#2563eb]"
+        />
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={row.rate || ""}
+          onChange={(e) => onChange("rate", e.target.value)}
+          placeholder="Rate"
+          className="h-12 min-w-0 rounded-xl border border-gray-300 px-3 outline-none focus:ring-2 focus:ring-[#2563eb]"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="mt-2 text-sm font-semibold text-rose-600"
+      >
+        Remove
+      </button>
+    </div>
+  );
+}
+
+function Input({
+  label,
+  value,
+  name,
+  editing = false,
+  onChange,
+}) {
   return (
     <div>
       <Label>{label}</Label>
       <input
         type="text"
-        value={value || "-"}
-        readOnly
-        className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none bg-gray-50"
+        value={editing ? value || "" : value || "-"}
+        name={name}
+        readOnly={!editing}
+        onChange={onChange}
+        className={`w-full border border-gray-300 rounded-xl px-4 py-3 outline-none ${
+          editing ? "bg-white focus:ring-2 focus:ring-[#2563eb]" : "bg-gray-50"
+        }`}
       />
     </div>
   );
