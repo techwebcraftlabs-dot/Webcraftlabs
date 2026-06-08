@@ -18,6 +18,7 @@ function BRSDetails({ setActivePage }) {
   const [loading, setLoading] = useState(Boolean(id));
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingStatus, setSavingStatus] = useState(false);
   const [formData, setFormData] = useState({});
   const [rateDistribution, setRateDistribution] = useState([]);
 
@@ -199,6 +200,26 @@ function BRSDetails({ setActivePage }) {
     }
   };
 
+  const handleStatusChange = async (value) => {
+    if (!record?.id) {
+      return;
+    }
+
+    try {
+      setSavingStatus(true);
+
+      await updateDoc(doc(db, "brs", record.id), {
+        status: value,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setSavingStatus(false);
+    }
+  };
+
   if (loading) {
     return (
       <section className="bg-[#f4f7fb] min-h-screen p-8">
@@ -233,7 +254,36 @@ function BRSDetails({ setActivePage }) {
           </p>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex flex-wrap items-center justify-end gap-4">
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">
+              Status
+            </label>
+            <select
+              value={record.status || "For Approval"}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              disabled={savingStatus}
+              className="
+                h-12
+                rounded-xl
+                border
+                border-gray-200
+                bg-white
+                px-4
+                font-semibold
+                text-[#0d1b4c]
+                outline-none
+                focus:ring-2
+                focus:ring-[#2563eb]
+                disabled:opacity-60
+              "
+            >
+              <option value="For Approval">For Approval</option>
+              <option value="Approved">Approved</option>
+              <option value="Hold">Hold</option>
+            </select>
+          </div>
+
           <button
             onClick={handleBack}
             className="bg-gray-200 hover:bg-gray-300 px-6 py-3 rounded-xl font-semibold"

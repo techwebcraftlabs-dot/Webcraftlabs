@@ -11,6 +11,8 @@ function BRS() {
   const navigate = useNavigate();
   const [brsRecords, setBrsRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("For Approval");
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -41,6 +43,26 @@ function BRS() {
     return () => unsubscribe();
   }, []);
 
+  const statusOptions = ["For Approval", "Approved", "Hold"];
+
+  const filteredRecords = brsRecords.filter((record) => {
+    const status = record.status || "For Approval";
+    const searchValue = search.toLowerCase();
+    const matchesStatus = statusFilter === "All" || status === statusFilter;
+    const matchesSearch = [
+      record.brsId,
+      record.buyer,
+      record.project,
+      record.developer,
+      record.block,
+      record.lot,
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(searchValue));
+
+    return matchesStatus && matchesSearch;
+  });
+
   const statusStyles = {
     Approved:
       "bg-emerald-50 text-emerald-700 border border-emerald-200",
@@ -48,10 +70,7 @@ function BRS() {
     "For Approval":
       "bg-amber-50 text-amber-700 border border-amber-200",
 
-    Pending:
-      "bg-sky-50 text-sky-700 border border-sky-200",
-
-    Rejected:
+    Hold:
       "bg-rose-50 text-rose-700 border border-rose-200",
   };
 
@@ -87,23 +106,52 @@ function BRS() {
         </button>
       </div>
 
-      {/* SEARCH */}
+      {/* SEARCH AND FILTERS */}
       <div className="bg-white rounded-2xl p-5 shadow-sm mb-6">
-        <input
-          type="text"
-          placeholder="Search BRS / Buyer / Project"
-          className="
-            w-full
-            bg-[#f5f6fa]
-            rounded-xl
-            px-4
-            py-3
-            outline-none
-            border
-            border-transparent
-            focus:border-[#6c63ff]
-          "
-        />
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search BRS / Buyer / Project"
+            className="
+              w-full
+              bg-[#f5f6fa]
+              rounded-xl
+              px-4
+              py-3
+              outline-none
+              border
+              border-transparent
+              focus:border-[#6c63ff]
+            "
+          />
+
+          <div className="flex flex-wrap gap-2">
+            {["All", ...statusOptions].map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setStatusFilter(status)}
+                className={`
+                  rounded-xl
+                  px-4
+                  py-3
+                  text-sm
+                  font-semibold
+                  transition-all
+                  ${
+                    statusFilter === status
+                      ? "bg-[#0d1b4c] text-white shadow-md"
+                      : "bg-[#f5f6fa] text-gray-600 hover:bg-gray-100"
+                  }
+                `}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* TABLE */}
@@ -134,18 +182,18 @@ function BRS() {
               </tr>
             )}
 
-            {!loading && brsRecords.length === 0 && (
+            {!loading && filteredRecords.length === 0 && (
               <tr>
                 <td
                   colSpan="8"
                   className="p-8 text-center text-gray-500"
                 >
-                  No BRS records yet.
+                  No BRS records found.
                 </td>
               </tr>
             )}
 
-            {!loading && brsRecords.map((record) => (
+            {!loading && filteredRecords.map((record) => (
               <tr
                 key={record.id}
                 onClick={() => navigate(`/brs-details/${record.id}`)}
