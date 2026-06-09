@@ -37,6 +37,7 @@ function RateDistribution() {
   const [computations, setComputations] = useState([]);
   const [savingComputation, setSavingComputation] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState("");
+  const [batchSearch, setBatchSearch] = useState("");
   const [voucherBatchState, setVoucherBatchState] = useState(() =>
     JSON.parse(localStorage.getItem("selectedVoucherBatch")) || null
   );
@@ -133,6 +134,27 @@ function RateDistribution() {
   const allBatchBuyersDone =
     batchBuyers.length > 0 &&
     batchBuyers.every((voucher) => voucher.computationStatus === "Done");
+  const filteredBatchBuyers = batchBuyers.filter((voucher) => {
+    const searchValue = batchSearch.toLowerCase();
+
+    if (!searchValue) {
+      return true;
+    }
+
+    return [
+      voucher.brsId,
+      voucher.buyer,
+      voucher.project,
+      voucher.phase,
+      voucher.block,
+      voucher.lot,
+      voucher.status,
+      voucher.computationStatus,
+      voucher.voucherDate,
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(searchValue));
+  });
 
   const handleViewBatchBuyer = (voucher) => {
     const brsRecord = voucher.brsRecord || {};
@@ -169,6 +191,12 @@ function RateDistribution() {
     localStorage.removeItem("selectedBuyer");
     localStorage.removeItem("selectedVoucherBatch");
     localStorage.setItem("activeDashboardPage", "commission");
+    navigate("/dashboard");
+  };
+
+  const handleBackToAddBuyers = () => {
+    localStorage.removeItem("selectedBuyer");
+    localStorage.setItem("activeDashboardPage", "create-voucher");
     navigate("/dashboard");
   };
 
@@ -391,16 +419,35 @@ function RateDistribution() {
           </p>
         </div>
 
-        <div className="flex justify-end">
+        <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <button
             type="button"
-            onClick={handleFinishBatch}
-            disabled={!allBatchBuyersDone}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#0d1b4c] px-6 py-3 text-sm font-black text-white shadow-lg transition disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none"
+            onClick={handleBackToAddBuyers}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-black text-[#0d1b4c] shadow-sm transition hover:bg-slate-50"
           >
-            <Save className="h-4 w-4" />
-            Save Voucher
+            <ArrowLeft className="h-4 w-4" />
+            Back to Add Buyers
           </button>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <input
+              type="text"
+              value={batchSearch}
+              onChange={(e) => setBatchSearch(e.target.value)}
+              placeholder="Search buyer, BRS, project or lot..."
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-blue-100 sm:w-[320px]"
+            />
+
+            <button
+              type="button"
+              onClick={handleFinishBatch}
+              disabled={!allBatchBuyersDone}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0d1b4c] px-6 py-3 text-sm font-black text-white shadow-lg transition disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none"
+            >
+              <Save className="h-4 w-4" />
+              Save Voucher
+            </button>
+          </div>
         </div>
 
         <div className="mb-8 grid gap-5 md:grid-cols-3">
@@ -427,7 +474,15 @@ function RateDistribution() {
               </tr>
             </thead>
             <tbody>
-              {batchBuyers.map((voucher) => (
+              {filteredBatchBuyers.length === 0 && (
+                <tr>
+                  <td colSpan="7" className="p-8 text-center text-gray-500">
+                    No buyers match your search.
+                  </td>
+                </tr>
+              )}
+
+              {filteredBatchBuyers.map((voucher) => (
                 <tr key={voucher.id} className="border-b border-slate-200">
                   <td className="p-4 font-bold text-[#0d1b4c]">
                     {voucher.brsId || "-"}

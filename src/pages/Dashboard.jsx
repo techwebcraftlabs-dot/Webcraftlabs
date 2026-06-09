@@ -50,7 +50,6 @@ function Dashboard() {
     case 'agents':
       return (
         <>
-          <Topbar />
 
           <div className="mt-8">
             <Agents />
@@ -61,7 +60,6 @@ function Dashboard() {
     case 'brs':
       return (
         <>
-          <Topbar />
 
           <div className="mt-8">
             <BRS
@@ -75,7 +73,6 @@ function Dashboard() {
     case 'brs-details':
       return (
         <>
-          <Topbar />
 
           <div className="mt-8">
             <BRSDetails
@@ -98,7 +95,6 @@ function Dashboard() {
     case 'create-voucher':
       return (
         <>
-          <Topbar />
 
           <div className="mt-8">
             <Commission
@@ -111,7 +107,6 @@ function Dashboard() {
     case 'calculation':
       return (
         <>
-          <Topbar />
 
           <div className="mt-8">
             <Calculation
@@ -124,7 +119,6 @@ function Dashboard() {
     case 'teams':
       return (
         <>
-          <Topbar />
 
           <div className="mt-8 bg-white rounded-[30px] p-10">
             Teams Page
@@ -135,7 +129,6 @@ function Dashboard() {
     case 'reports':
       return (
         <>
-          <Topbar />
 
           <div className="mt-8 bg-white rounded-[30px] p-10">
             Reports Page
@@ -146,7 +139,6 @@ function Dashboard() {
     case 'directory':
       return (
         <>
-          <Topbar />
 
           <div className="mt-8 bg-white rounded-[30px] p-10">
             Directory Page
@@ -157,7 +149,6 @@ function Dashboard() {
     default:
       return (
         <>
-          <Topbar />
 
           <div className="mt-8">
             <StatsCards />

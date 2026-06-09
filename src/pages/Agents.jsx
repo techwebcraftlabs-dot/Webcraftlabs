@@ -56,7 +56,7 @@ function Agents() {
   const navigate = useNavigate();
 
   const [showForm, setShowForm] = useState(false);
-
+  const [status, setStatus] = useState('All');
   const [formData, setFormData] = useState(getInitialFormData);
 const generateZonalEmail = (
   firstName,
@@ -281,6 +281,7 @@ useEffect(() => {
           <TextField
             label="Mobile Number"
             name="mobileNumber"
+            type="number"
             value={formData.mobileNumber}
             onChange={handleChange}
           />
@@ -384,10 +385,10 @@ useEffect(() => {
           />
         </div>
 
-        <select className="border rounded-xl px-4">
-          <option>All Status</option>
-          <option>Active</option>
-          <option>For Approval</option>
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className="border rounded-xl px-4">
+        <option value="All">All Status</option>
+        <option value="Active">Active</option>
+        <option value="For Approval">For Approval</option>
         </select>
       </div>
 
@@ -405,7 +406,8 @@ useEffect(() => {
           </thead>
 
           <tbody>
-            {agents.map((agent) => (
+            {agents?.filter((agent) => status === "All" || agent.status === status)
+                   .map((agent) => (
               <tr
   key={agent.id}
   onClick={() => navigate(`/agents/${agent.id}`)}
@@ -454,7 +456,7 @@ function Label({ children }) {
 }
 
 const fieldClassName =
-  'h-12 w-full border border-gray-200 rounded-xl px-4 text-sm outline-none transition focus:border-[#4f5dff] focus:ring-2 focus:ring-[#4f5dff]/10 disabled:bg-gray-50 read-only:bg-gray-50';
+  '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none h-12 w-full border border-gray-200 rounded-xl px-4 text-sm outline-none transition focus:border-[#4f5dff] focus:ring-2 focus:ring-[#4f5dff]/10 disabled:bg-gray-50 read-only:bg-gray-50';
 
 function Field({ label, className = '', children }) {
   return (

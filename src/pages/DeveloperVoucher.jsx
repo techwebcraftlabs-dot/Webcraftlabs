@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { collection, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { Eye, FileDown, Plus, Sheet, X } from "lucide-react";
 
@@ -7,10 +8,12 @@ import { db } from "../firebase";
 const peso = "\u20b1";
 
 function DeveloperVoucher({ setActivePage }) {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedIds, setSelectedIds] = useState([]);
   const [voucherRows, setVoucherRows] = useState([]);
+  const [brsRecords, setBrsRecords] = useState([]);
   const [computations, setComputations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
@@ -49,6 +52,26 @@ function DeveloperVoucher({ setActivePage }) {
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
+      collection(db, "brs"),
+      (snapshot) => {
+        setBrsRecords(
+          snapshot.docs.map((item) => ({
+            id: item.id,
+            ...item.data(),
+          }))
+        );
+      },
+      (error) => {
+        console.error(error);
+        alert(error.message);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
       collection(db, "commissionComputations"),
       (snapshot) => {
         setComputations(
@@ -73,9 +96,11 @@ function DeveloperVoucher({ setActivePage }) {
     const matchSearch = [
       item.voucherNo,
       item.buyerNames,
+      item.brsIds,
       item.developer,
       item.project,
       item.voucherDate,
+      item.status,
     ]
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(searchValue));
@@ -124,6 +149,29 @@ function DeveloperVoucher({ setActivePage }) {
         ? current.filter((item) => item !== id)
         : [...current, id]
     );
+  };
+
+  const handleOpenVoucher = (voucher) => {
+    const buyers = voucher.buyers.map((buyer) => ({
+      ...buyer,
+      brsRecord:
+        brsRecords.find((record) => record.id === buyer.brsDocId) || {},
+    }));
+
+    localStorage.removeItem("selectedBuyer");
+    localStorage.setItem(
+      "selectedVoucherBatch",
+      JSON.stringify({
+        voucherBatchId: voucher.id,
+        voucherNo: voucher.voucherNo,
+        voucherDate: voucher.voucherDate,
+        voucherGrossAmount: voucher.grossComm,
+        buyerAssignedTotal: voucher.assignedTotal,
+        buyers,
+      })
+    );
+
+    navigate("/RateDistribution");
   };
 
   const handleSelectAll = () => {
@@ -309,7 +357,7 @@ function DeveloperVoucher({ setActivePage }) {
                     <button
                       onClick={(event) => {
                         event.stopPropagation();
-                        setSelectedVoucher(item);
+                        handleOpenVoucher(item);
                       }}
                       className="inline-flex items-center gap-2 rounded-lg bg-[#4f5dff] px-4 py-2 text-sm text-white"
                     >
@@ -584,6 +632,7 @@ function groupVoucherRows(rows) {
     voucher.developer = mergeLabel(voucher.developer, row.developer);
     voucher.project = mergeLabel(voucher.project, row.project);
     voucher.buyerNames = mergeLabel(voucher.buyerNames, row.buyer);
+    voucher.brsIds = mergeLabel(voucher.brsIds, row.brsId);
   });
 
   return Array.from(grouped.values()).sort((a, b) =>

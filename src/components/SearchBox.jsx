@@ -1,4 +1,11 @@
-function SearchBox() {
+function SearchBox({ filters, onFilterChange, onSearch }) {
+  const updateFilter = (field, value) => {
+    onFilterChange?.({
+      ...filters,
+      [field]: value,
+    })
+  }
+
   return (
     <div className="bg-white rounded-[30px] shadow-2xl p-5 md:p-6">
 
@@ -12,6 +19,8 @@ function SearchBox() {
           </p>
 
           <select
+            value={filters?.location || ""}
+            onChange={(event) => updateFilter("location", event.target.value)}
             className="
               w-full
               bg-transparent
@@ -21,10 +30,14 @@ function SearchBox() {
               cursor-pointer
             "
           >
-            <option>Choose Location</option>
-            <option>Manila</option>
+            <option value="">Choose Location</option>
+            <option value="Makati">Makati</option>
+            <option value="BGC">BGC</option>
             <option>Cavite</option>
             <option>Tagaytay</option>
+            <option>Rizal</option>
+            <option>Nuvali</option>
+            <option>Antipolo</option>
           </select>
 
         </div>
@@ -37,6 +50,8 @@ function SearchBox() {
           </p>
 
           <select
+            value={filters?.type || ""}
+            onChange={(event) => updateFilter("type", event.target.value)}
             className="
               w-full
               bg-transparent
@@ -46,10 +61,12 @@ function SearchBox() {
               cursor-pointer
             "
           >
-            <option>Choose Type</option>
+            <option value="">Choose Type</option>
             <option>Villa</option>
             <option>Condo</option>
-            <option>Apartment</option>
+            <option>House</option>
+            <option>Townhouse</option>
+            <option>Penthouse</option>
           </select>
 
         </div>
@@ -62,6 +79,8 @@ function SearchBox() {
           </p>
 
           <select
+            value={filters?.budget || ""}
+            onChange={(event) => updateFilter("budget", event.target.value)}
             className="
               w-full
               bg-transparent
@@ -71,16 +90,18 @@ function SearchBox() {
               cursor-pointer
             "
           >
-            <option>Select Budget</option>
-            <option>$100k - $300k</option>
-            <option>$300k - $700k</option>
-            <option>$1M+</option>
+            <option value="">Select Budget</option>
+            <option>Under 7M</option>
+            <option>7M - 15M</option>
+            <option>15M+</option>
           </select>
 
         </div>
 
         {/* SEARCH BUTTON */}
         <button
+          type="button"
+          onClick={onSearch}
           className="
             h-full
             min-h-[78px]

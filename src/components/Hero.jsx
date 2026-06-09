@@ -1,7 +1,222 @@
+import { useMemo, useState } from 'react'
+import {
+  Bath,
+  BedDouble,
+  Car,
+  CheckCircle,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Ruler,
+  X,
+} from 'lucide-react'
+
 import SearchBox from './SearchBox'
 import About3D from './About3D'
 
+const peso = "\u20b1"
+
+const availableAgents = [
+  {
+    id: 'sophia',
+    name: 'Sophia Miller',
+    role: 'Buyer Specialist',
+    phone: '+63 917 204 8831',
+    email: 'sophia@zonalrealty.com',
+    area: 'Makati, BGC',
+    response: 'Usually replies within 10 minutes',
+    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1200&auto=format&fit=crop',
+  },
+  {
+    id: 'michael',
+    name: 'Michael Lee',
+    role: 'Luxury Property Specialist',
+    phone: '+63 918 447 1902',
+    email: 'michael@zonalrealty.com',
+    area: 'Tagaytay, Cavite',
+    response: 'Available for site viewing today',
+    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1200&auto=format&fit=crop',
+  },
+  {
+    id: 'olivia',
+    name: 'Olivia Cruz',
+    role: 'Residential Consultant',
+    phone: '+63 916 832 4410',
+    email: 'olivia@zonalrealty.com',
+    area: 'Rizal, Antipolo',
+    response: 'Can send sample computation',
+    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=1200&auto=format&fit=crop',
+  },
+  {
+    id: 'mark',
+    name: 'Mark Santos',
+    role: 'Investment Advisor',
+    phone: '+63 919 561 7302',
+    email: 'mark@zonalrealty.com',
+    area: 'Nuvali, South Luzon',
+    response: 'Open for weekend tripping',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1200&auto=format&fit=crop',
+  },
+]
+
+const propertyListings = [
+  {
+    title: 'Modern Villa',
+    location: 'Tagaytay City',
+    type: 'Villa',
+    priceValue: 12.5,
+    image: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?q=80&w=1200&auto=format&fit=crop',
+    beds: 4,
+    baths: 4,
+    parking: 2,
+    floorArea: '320 sqm',
+    lotArea: '480 sqm',
+    description: 'A private Tagaytay villa with open living spaces, cool-weather views, and room for family weekends or premium short-stay investment.',
+    highlights: ['Panoramic ridge-facing windows', 'Open kitchen and dining layout', 'Ready for private viewing'],
+    agentIds: ['michael', 'olivia'],
+  },
+  {
+    title: 'Luxury Condominium',
+    location: 'Makati City',
+    type: 'Condo',
+    priceValue: 8.9,
+    image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop',
+    beds: 2,
+    baths: 2,
+    parking: 1,
+    floorArea: '88 sqm',
+    lotArea: 'High-rise',
+    description: 'A polished Makati residence close to business districts, dining, and daily essentials for buyers who want convenience first.',
+    highlights: ['Concierge-ready tower', 'Near offices and lifestyle malls', 'Ideal for rental income'],
+    agentIds: ['sophia', 'mark'],
+  },
+  {
+    title: 'Executive House',
+    location: 'Cavite',
+    type: 'House',
+    priceValue: 6.8,
+    image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?q=80&w=1200&auto=format&fit=crop',
+    beds: 3,
+    baths: 3,
+    parking: 2,
+    floorArea: '210 sqm',
+    lotArea: '300 sqm',
+    description: 'A practical executive home with flexible spaces for growing families and easy access to southern growth corridors.',
+    highlights: ['Quiet village setting', 'Expandable service area', 'Good starter family home'],
+    agentIds: ['michael', 'mark'],
+  },
+  {
+    title: 'Premium Townhouse',
+    location: 'Rizal',
+    type: 'Townhouse',
+    priceValue: 5.4,
+    image: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?q=80&w=1200&auto=format&fit=crop',
+    beds: 3,
+    baths: 2,
+    parking: 1,
+    floorArea: '165 sqm',
+    lotArea: '120 sqm',
+    description: 'A low-maintenance townhouse for buyers who want a city-adjacent home with a calmer residential environment.',
+    highlights: ['Move-in friendly layout', 'Near schools and retail', 'Efficient monthly carrying cost'],
+    agentIds: ['olivia', 'sophia'],
+  },
+  {
+    title: 'Skyline Residence',
+    location: 'BGC',
+    type: 'Condo',
+    priceValue: 14.2,
+    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=1200',
+    beds: 3,
+    baths: 3,
+    parking: 2,
+    floorArea: '145 sqm',
+    lotArea: 'High-rise',
+    description: 'A bright BGC residence built for walkable city living, with generous windows and quick access to premium offices.',
+    highlights: ['Prime business district address', 'Great resale profile', 'Flexible turnover options'],
+    agentIds: ['sophia', 'mark'],
+  },
+  {
+    title: 'Grand Estate',
+    location: 'Nuvali',
+    type: 'House',
+    priceValue: 18.7,
+    image: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?q=80&w=1200',
+    beds: 5,
+    baths: 5,
+    parking: 3,
+    floorArea: '420 sqm',
+    lotArea: '650 sqm',
+    description: 'A larger estate-style property for buyers who want open outdoor space, privacy, and a long-term family base.',
+    highlights: ['Large garden frontage', 'Premium village location', 'Best for end-use buyers'],
+    agentIds: ['mark', 'michael'],
+  },
+  {
+    title: 'Luxury Penthouse',
+    location: 'Makati',
+    type: 'Penthouse',
+    priceValue: 22.5,
+    image: 'https://images.unsplash.com/photo-1494526585095-c41746248156?q=80&w=1200',
+    beds: 4,
+    baths: 4,
+    parking: 3,
+    floorArea: '260 sqm',
+    lotArea: 'Top floor',
+    description: 'A premium penthouse with generous entertaining areas for buyers looking for a high-end Makati address.',
+    highlights: ['Private lift lobby feel', 'Large entertainment space', 'Excellent city views'],
+    agentIds: ['sophia', 'michael'],
+  },
+  {
+    title: 'Family Residence',
+    location: 'Antipolo',
+    type: 'House',
+    priceValue: 7.2,
+    image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1200',
+    beds: 4,
+    baths: 3,
+    parking: 2,
+    floorArea: '240 sqm',
+    lotArea: '360 sqm',
+    description: 'A comfortable Antipolo family home with outdoor breathing room and a relaxed neighborhood feel.',
+    highlights: ['Pool-ready outdoor area', 'Family-friendly village', 'Good value per square meter'],
+    agentIds: ['olivia', 'mark'],
+  },
+]
+
+const budgetRanges = {
+  'Under 7M': (price) => price < 7,
+  '7M - 15M': (price) => price >= 7 && price <= 15,
+  '15M+': (price) => price > 15,
+}
+
 function Hero() {
+  const [selectedProperty, setSelectedProperty] = useState(null)
+  const [filters, setFilters] = useState({
+    location: '',
+    type: '',
+    budget: '',
+  })
+
+  const filteredProperties = useMemo(() => {
+    return propertyListings.filter((property) => {
+      const matchesLocation =
+        !filters.location ||
+        property.location.toLowerCase().includes(filters.location.toLowerCase())
+      const matchesType = !filters.type || property.type === filters.type
+      const matchesBudget =
+        !filters.budget || budgetRanges[filters.budget]?.(property.priceValue)
+
+      return matchesLocation && matchesType && matchesBudget
+    })
+  }, [filters])
+
+  const handleSearchProperties = () => {
+    document.getElementById('properties')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
+
   return (
     <section id="home">
 
@@ -95,7 +310,11 @@ function Hero() {
           </div>
 
           <div className="relative z-30 mt-16 translate-y-8">
-            <SearchBox />
+            <SearchBox
+              filters={filters}
+              onFilterChange={setFilters}
+              onSearch={handleSearchProperties}
+            />
           </div>
 
         </div>
@@ -500,57 +719,7 @@ function Hero() {
     {/* PROPERTY GRID */}
     <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-8">
 
-      {[
-  {
-    title: 'Modern Villa',
-    location: 'Tagaytay City',
-    price: '₱12.5M',
-    image: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?q=80&w=1200&auto=format&fit=crop',
-  },
-  {
-    title: 'Luxury Condominium',
-    location: 'Makati City',
-    price: '₱8.9M',
-    image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop',
-  },
-  {
-    title: 'Executive House',
-    location: 'Cavite',
-    price: '₱6.8M',
-    image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?q=80&w=1200&auto=format&fit=crop',
-  },
-  {
-    title: 'Premium Townhouse',
-    location: 'Rizal',
-    price: '₱5.4M',
-    image: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?q=80&w=1200&auto=format&fit=crop',
-  },
-  {
-    title: 'Skyline Residence',
-    location: 'BGC',
-    price: '₱14.2M',
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=1200',
-  },
-  {
-    title: 'Grand Estate',
-    location: 'Nuvali',
-    price: '₱18.7M',
-    image: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?q=80&w=1200',
-  },
-  {
-    title: 'Luxury Penthouse',
-    location: 'Makati',
-    price: '₱22.5M',
-    image: 'https://images.unsplash.com/photo-1494526585095-c41746248156?q=80&w=1200',
-  },
-  {
-    title: 'Family Residence',
-    location: 'Antipolo',
-    price: '₱7.2M',
-    image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1200',
-  },
-
-].map((property, index) => (
+      {filteredProperties.map((property, index) => (
 
         <div
           key={index}
@@ -628,10 +797,12 @@ function Hero() {
         text-[#d2a06b]
       "
     >
-      {property.price}
+      {formatPrice(property)}
     </span>
 
     <button
+      type="button"
+      onClick={() => setSelectedProperty(property)}
       className="
         bg-[#2d1f18]
         text-white
@@ -654,11 +825,31 @@ function Hero() {
 
       ))}
 
+      {filteredProperties.length === 0 && (
+        <div className="md:col-span-2 xl:col-span-4 rounded-[28px] bg-white p-10 text-center shadow-lg">
+          <h3 className="text-2xl font-black text-[#2d1f18]">
+            No matching properties found
+          </h3>
+
+          <p className="mt-3 text-gray-500">
+            Try another location, property type, or budget range.
+          </p>
+        </div>
+      )}
+
     </div>
 
   </div>
 
 </section>
+
+{selectedProperty && (
+  <PropertyDetailsModal
+    property={selectedProperty}
+    onClose={() => setSelectedProperty(null)}
+  />
+)}
+
 {/* FOOTER */}
 <footer className="relative bg-[#111111] overflow-hidden">
 
@@ -848,6 +1039,200 @@ function Hero() {
 </footer>
     </section>
   )
+}
+
+function PropertyDetailsModal({ property, onClose }) {
+  const agents = availableAgents.filter((agent) =>
+    property.agentIds.includes(agent.id)
+  )
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 px-4 py-6 backdrop-blur-sm">
+      <div className="mx-auto w-full max-w-6xl overflow-hidden rounded-[28px] bg-[#fbf8f3] shadow-2xl">
+        <div className="relative h-[280px] overflow-hidden md:h-[420px]">
+          <img
+            src={property.image}
+            alt={property.title}
+            className="h-full w-full object-cover"
+          />
+
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-5 top-5 rounded-full bg-white/95 p-3 text-[#2d1f18] shadow-lg transition hover:bg-white"
+            aria-label="Close property details"
+          >
+            <X className="h-5 w-5" />
+          </button>
+
+          <div className="absolute bottom-6 left-6 right-6 text-white md:bottom-10 md:left-10">
+            <p className="inline-flex items-center gap-2 rounded-full bg-[#d6a77a] px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-black">
+              Featured Listing
+            </p>
+
+            <h2 className="mt-4 text-4xl font-black leading-tight md:text-6xl">
+              {property.title}
+            </h2>
+
+            <p className="mt-3 flex items-center gap-2 text-lg text-white/80">
+              <MapPin className="h-5 w-5" />
+              {property.location}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-8 p-6 lg:grid-cols-[1.25fr_0.75fr] lg:p-10">
+          <div>
+            <div className="flex flex-col gap-4 border-b border-[#e5d8c8] pb-8 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#a56b3f]">
+                  Property Details
+                </p>
+
+                <h3 className="mt-2 text-4xl font-black text-[#2d1f18]">
+                  {formatPrice(property)}
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Spec icon={BedDouble} label="Beds" value={property.beds} />
+                <Spec icon={Bath} label="Baths" value={property.baths} />
+                <Spec icon={Car} label="Parking" value={property.parking} />
+                <Spec icon={Ruler} label="Area" value={property.floorArea} />
+              </div>
+            </div>
+
+            <p className="mt-8 text-lg leading-relaxed text-gray-600">
+              {property.description}
+            </p>
+
+            <div className="mt-8 grid gap-3 md:grid-cols-3">
+              {property.highlights.map((highlight) => (
+                <div
+                  key={highlight}
+                  className="flex items-start gap-3 rounded-2xl bg-white p-4 shadow-sm"
+                >
+                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                  <p className="text-sm font-semibold text-[#2d1f18]">
+                    {highlight}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 rounded-[24px] bg-[#2d1f18] p-6 text-white">
+              <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#d6a77a]">
+                Buyer Inquiry Process
+              </p>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                {[
+                  'Choose an available agent for this property.',
+                  'Ask for sample computation, availability, and viewing schedule.',
+                  'Agent coordinates the site viewing or next buying step.',
+                ].map((step, index) => (
+                  <div key={step} className="rounded-2xl bg-white/10 p-4">
+                    <p className="text-2xl font-black text-[#d6a77a]">
+                      0{index + 1}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-white/80">
+                      {step}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <aside className="rounded-[24px] bg-white p-5 shadow-lg">
+            <div className="mb-5">
+              <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#a56b3f]">
+                Available Agents
+              </p>
+              <h3 className="mt-2 text-2xl font-black text-[#2d1f18]">
+                Contact for this property
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+              {agents.map((agent) => (
+                <div
+                  key={agent.id}
+                  className="rounded-2xl border border-[#eadccd] p-4"
+                >
+                  <div className="flex gap-4">
+                    <img
+                      src={agent.image}
+                      alt={agent.name}
+                      className="h-16 w-16 rounded-2xl object-cover"
+                    />
+
+                    <div>
+                      <h4 className="font-black text-[#2d1f18]">
+                        {agent.name}
+                      </h4>
+                      <p className="text-sm text-gray-500">{agent.role}</p>
+                      <p className="mt-1 text-xs font-semibold text-[#a56b3f]">
+                        {agent.area}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 rounded-xl bg-[#f8f3ed] px-4 py-3 text-sm font-semibold text-[#2d1f18]">
+                    {agent.response}
+                  </p>
+
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    <a
+                      href={`tel:${agent.phone.replaceAll(' ', '')}`}
+                      className="inline-flex items-center justify-center rounded-xl bg-[#2d1f18] px-3 py-3 text-white transition hover:bg-[#3f2c22]"
+                      aria-label={`Call ${agent.name}`}
+                    >
+                      <Phone className="h-4 w-4" />
+                    </a>
+
+                    <a
+                      href={`mailto:${agent.email}?subject=Inquiry for ${property.title}`}
+                      className="inline-flex items-center justify-center rounded-xl bg-[#d6a77a] px-3 py-3 text-black transition hover:bg-[#c7955f]"
+                      aria-label={`Email ${agent.name}`}
+                    >
+                      <Mail className="h-4 w-4" />
+                    </a>
+
+                    <a
+                      href={`sms:${agent.phone.replaceAll(' ', '')}?body=Hi ${agent.name}, I am interested in ${property.title} in ${property.location}.`}
+                      className="inline-flex items-center justify-center rounded-xl border border-[#d6a77a] px-3 py-3 text-[#2d1f18] transition hover:bg-[#f8f3ed]"
+                      aria-label={`Message ${agent.name}`}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Spec({ icon: Icon, label, value }) {
+  return (
+    <div className="rounded-2xl bg-white px-4 py-3 text-center shadow-sm">
+      <Icon className="mx-auto h-5 w-5 text-[#a56b3f]" />
+      <p className="mt-1 text-lg font-black text-[#2d1f18]">{value}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+        {label}
+      </p>
+    </div>
+  )
+}
+
+function formatPrice(property) {
+  return `${peso}${property.priceValue.toFixed(1)}M`
 }
 
 export default Hero

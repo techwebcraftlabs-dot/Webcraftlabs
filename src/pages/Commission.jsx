@@ -13,6 +13,7 @@ import { db } from "../firebase";
 
 function Commission() {
   const navigate = useNavigate();
+  const restoredVoucherBatch = readSelectedVoucherBatch();
   const [brsRecords, setBrsRecords] = useState([]);
   const [voucherRecords, setVoucherRecords] = useState([]);
   const [voucherLoading, setVoucherLoading] = useState(true);
@@ -20,17 +21,28 @@ function Commission() {
   const [selectedProject, setSelectedProject] = useState('');
   const [selectedBuyerName, setSelectedBuyerName] = useState('');
   const [selectedBRSId, setSelectedBRSId] = useState('');
-  const [voucherGrossAmount, setVoucherGrossAmount] = useState('');
+  const [voucherGrossAmount, setVoucherGrossAmount] = useState(
+    restoredVoucherBatch?.voucherGrossAmount
+      ? String(restoredVoucherBatch.voucherGrossAmount)
+      : ''
+  );
   const [buyerAssignedAmount, setBuyerAssignedAmount] = useState('');
-  const [voucherDate, setVoucherDate] = useState('');
+  const [voucherDate, setVoucherDate] = useState(
+    restoredVoucherBatch?.voucherDate &&
+      restoredVoucherBatch.voucherDate !== "-"
+      ? restoredVoucherBatch.voucherDate
+      : ''
+  );
   const [remarks, setRemarks] = useState('');
   const [voucherFile, setVoucherFile] = useState(null);
   const [voucherPreview, setVoucherPreview] = useState('');
   const [recordSearch, setRecordSearch] = useState('');
   const [selectedVoucherId, setSelectedVoucherId] = useState('');
   const [currentVoucherBatchId, setCurrentVoucherBatchId] =
-    useState(() => createVoucherBatchId());
-  const [currentVoucherIds, setCurrentVoucherIds] = useState([]);
+    useState(() => restoredVoucherBatch?.voucherBatchId || createVoucherBatchId());
+  const [currentVoucherIds, setCurrentVoucherIds] = useState(
+    () => restoredVoucherBatch?.buyers?.map((buyer) => buyer.id).filter(Boolean) || []
+  );
   const [savingVoucher, setSavingVoucher] = useState(false);
 
   useEffect(() => {
@@ -199,6 +211,8 @@ function Commission() {
 
   const resetVoucherSession = () => {
     clearForm();
+    localStorage.removeItem("selectedVoucherBatch");
+    localStorage.removeItem("selectedBuyer");
     setRecordSearch('');
     setSelectedVoucherId('');
     setCurrentVoucherIds([]);
@@ -1081,5 +1095,13 @@ function StatusBadge({ status = "Pending" }) {
 
 function createVoucherBatchId() {
   return `V-${Date.now()}`;
+}
+
+function readSelectedVoucherBatch() {
+  try {
+    return JSON.parse(localStorage.getItem("selectedVoucherBatch")) || null;
+  } catch {
+    return null;
+  }
 }
 
