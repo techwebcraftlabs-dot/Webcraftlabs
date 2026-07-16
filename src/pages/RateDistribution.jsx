@@ -1,16 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  addDoc,
-  collection,
-  doc,
-  onSnapshot,
-  serverTimestamp,
-  updateDoc,
-} from "firebase/firestore";
 import { ArrowLeft, CheckCircle, Eye, Loader2, Save } from "lucide-react";
 
-import { db } from "../firebase";
+import { computationApi, voucherApi } from "../lib/api";
 
 const deductionFields = [
   "savings",
@@ -55,12 +47,16 @@ function RateDistribution() {
     : [];
 
   useEffect(() => {
-    const unsubscribe = onSnapshotCollection(
-      "commissionComputations",
-      setComputations
-    );
+    const loadComputations = async () => {
+      try {
+        setComputations(await computationApi.list());
+      } catch (error) {
+        console.error(error);
+        alert(error.message);
+      }
+    };
 
-    return () => unsubscribe();
+    loadComputations();
   }, []);
 
   const normalizeRole = (person) => person.role?.trim().toLowerCase() || "";
@@ -200,8 +196,10 @@ function RateDistribution() {
     navigate("/dashboard");
   };
 
-  const getRowKey = (person, index) =>
-    `${normalizeRole(person)}-${person.name || ""}-${index}`;
+  const getRowKey = useCallback(
+    (person, index) => `${normalizeRole(person)}-${person.name || ""}-${index}`,
+    []
+  );
 
   const selectedComputation = findSavedComputation(
     computations,
@@ -210,21 +208,25 @@ function RateDistribution() {
   );
 
   useEffect(() => {
-    if (!activeBuyer) {
-      setDeductionsByRow({});
-      return;
-    }
+    const syncSavedDeductions = () => {
+      if (!activeBuyer) {
+        setDeductionsByRow({});
+        return;
+      }
 
-    if (!selectedComputation) {
-      setDeductionsByRow({});
-      return;
-    }
+      if (!selectedComputation) {
+        setDeductionsByRow({});
+        return;
+      }
 
-    setDeductionsByRow(
-      buildSavedDeductions(selectedComputation.rows || [], getRowKey)
-    );
-    setLastSavedAt("");
-  }, [activeBuyer, selectedComputation]);
+      setDeductionsByRow(
+        buildSavedDeductions(selectedComputation.rows || [], getRowKey)
+      );
+      setLastSavedAt("");
+    };
+
+    queueMicrotask(syncSavedDeductions);
+  }, [activeBuyer, selectedComputation, getRowKey]);
 
   const getDeductions = (rowKey) => deductionsByRow[rowKey] || {};
 
@@ -339,23 +341,18 @@ function RateDistribution() {
           taxAmount: row.taxAmount,
           netAmount: row.netAmount,
         })),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       };
 
       if (selectedComputation?.id) {
-        await updateDoc(
-          doc(db, "commissionComputations", selectedComputation.id),
-          computationData
-        );
+        await computationApi.update(selectedComputation.id, computationData);
       } else {
-        await addDoc(collection(db, "commissionComputations"), computationData);
+        await computationApi.create(computationData);
       }
 
       if (buyer.selectedVoucherId) {
-        await updateDoc(doc(db, "commissionVouchers", buyer.selectedVoucherId), {
+        await voucherApi.patch(buyer.selectedVoucherId, {
           computationStatus: "Done",
-          computedAt: serverTimestamp(),
+          computedAt: new Date().toISOString(),
         });
       }
 
@@ -748,24 +745,6 @@ function StatusBadge({ status = "Pending" }) {
     >
       {done ? "Done" : "Pending"}
     </span>
-  );
-}
-
-function onSnapshotCollection(collectionName, setRecords) {
-  return onSnapshot(
-    collection(db, collectionName),
-    (snapshot) => {
-      setRecords(
-        snapshot.docs.map((item) => ({
-          id: item.id,
-          ...item.data(),
-        }))
-      );
-    },
-    (error) => {
-      console.error(error);
-      alert(error.message);
-    }
   );
 }
 

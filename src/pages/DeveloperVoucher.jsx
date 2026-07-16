@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { Eye, FileDown, Plus, Sheet, X } from "lucide-react";
 
-import { db } from "../firebase";
+import { brsApi, computationApi, voucherApi } from "../lib/api";
 
 const peso = "\u20b1";
 
@@ -19,75 +18,53 @@ function DeveloperVoucher({ setActivePage }) {
   const [selectedVoucher, setSelectedVoucher] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "commissionVouchers"),
-      (snapshot) => {
-        const records = snapshot.docs.map((item) => ({
-          id: item.id,
-          ...item.data(),
-        }));
-
+    const loadVouchers = async () => {
+      try {
+        const records = await voucherApi.list();
         records.sort((a, b) => {
           const dateA =
-            a.createdAt?.toMillis?.() ||
             new Date(a.voucherDate || 0).getTime();
           const dateB =
-            b.createdAt?.toMillis?.() ||
             new Date(b.voucherDate || 0).getTime();
           return dateB - dateA;
         });
 
         setVoucherRows(records);
-        setLoading(false);
-      },
-      (error) => {
+      } catch (error) {
         console.error(error);
         alert(error.message);
+      } finally {
         setLoading(false);
       }
-    );
+    };
 
-    return () => unsubscribe();
+    loadVouchers();
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "brs"),
-      (snapshot) => {
-        setBrsRecords(
-          snapshot.docs.map((item) => ({
-            id: item.id,
-            ...item.data(),
-          }))
-        );
-      },
-      (error) => {
+    const loadBRS = async () => {
+      try {
+        setBrsRecords(await brsApi.list());
+      } catch (error) {
         console.error(error);
         alert(error.message);
       }
-    );
+    };
 
-    return () => unsubscribe();
+    loadBRS();
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "commissionComputations"),
-      (snapshot) => {
-        setComputations(
-          snapshot.docs.map((item) => ({
-            id: item.id,
-            ...item.data(),
-          }))
-        );
-      },
-      (error) => {
+    const loadComputations = async () => {
+      try {
+        setComputations(await computationApi.list());
+      } catch (error) {
         console.error(error);
         alert(error.message);
       }
-    );
+    };
 
-    return () => unsubscribe();
+    loadComputations();
   }, []);
 
   const viewData = useMemo(() => groupVoucherRows(voucherRows), [voucherRows]);
@@ -132,7 +109,7 @@ function DeveloperVoucher({ setActivePage }) {
 
       await Promise.all(
         (voucher?.buyers || []).map((buyer) =>
-          updateDoc(doc(db, "commissionVouchers", buyer.id), {
+          voucherApi.patch(buyer.id, {
             status: value,
           })
         )
@@ -660,7 +637,7 @@ function formatCurrency(value) {
 
 function formatDate(timestamp) {
   if (!timestamp?.toDate) {
-    return "-";
+    return timestamp ? new Date(timestamp).toLocaleDateString() : "-";
   }
 
   return timestamp.toDate().toLocaleDateString();

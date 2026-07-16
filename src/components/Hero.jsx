@@ -1,14 +1,19 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Bath,
   BedDouble,
+  Building2,
   Car,
   CheckCircle,
+  House,
   Mail,
   MapPin,
   MessageCircle,
   Phone,
   Ruler,
+  TrendingUp,
+  UsersRound,
   X,
 } from 'lucide-react'
 
@@ -221,128 +226,90 @@ function Hero() {
     <section id="home">
 
       {/* HERO */}
-      <div className="relative min-h-screen overflow-hidden pb-40">
+      <div className="relative bg-white pt-[66px]">
+        <div className="relative overflow-hidden pb-8 md:min-h-[680px] md:pb-0 lg:min-h-[clamp(650px,calc(100vh-80px),760px)]">
+          <img
+            src="/homepage-neighborhood.png"
+            alt="Residential subdivision"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
 
-        {/* BACKGROUND */}
-        <img
-          src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?q=80&w=1800&auto=format&fit=crop"
-          alt="Luxury Home"
-          className="absolute inset-0 w-full h-full object-cover scale-110"
-        />
+          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/10" />
 
-        {/* OVERLAY */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/40"></div>
-
-        {/* CONTENT */}
-        <div className="relative z-20 max-w-7xl mx-auto px-6 md:px-12 pt-40">
-
-          <div className="max-w-3xl">
-
-            <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 px-5 py-3 rounded-full mb-8">
-              <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
-
-              <span className="text-white text-sm">
+          <div className="relative z-20 mx-auto max-w-[1180px] px-5 pb-0 pt-9 sm:px-6 md:px-10 md:pt-12 xl:px-0">
+            <div className="max-w-[660px]">
+              <div className="mb-5 inline-flex max-w-full items-center gap-3 rounded-full bg-black/45 px-4 py-2.5 text-xs font-semibold text-white shadow-2xl backdrop-blur-md sm:px-5 sm:py-3 sm:text-sm">
+                <span className="h-3 w-3 rounded-full bg-emerald-400 shadow-[0_0_0_6px_rgba(52,211,153,0.12)]" />
                 Trusted by 100+ Real Estate Developers
-              </span>
-            </div>
-
-            <h1 className="text-6xl md:text-[100px] leading-[0.9] font-black text-white">
-              Modern
-              <br />
-              <span className="text-[#d6a77a]">
-                Realty Platform
-              </span>
-            </h1>
-
-            <p className="mt-8 text-xl text-white/80 leading-relaxed max-w-2xl">
-              A complete real estate ecosystem designed for
-              brokers, developers, agents, and property buyers.
-              Manage listings, commissions, teams, and property
-              transactions all in one platform.
-            </p>
-
-            <div className="flex flex-wrap gap-5 mt-10">
-
-              <button className="bg-[#c9a063] text-black px-8 py-4 rounded-2xl font-bold shadow-2xl hover:scale-105 transition-all duration-300">
-                Get Started
-              </button>
-
-              <button className="border border-white text-white px-8 py-4 rounded-2xl hover:bg-white hover:text-black transition-all duration-300">
-                Watch Demo
-              </button>
-
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 md:gap-10 mt-16">
-
-              <div>
-                <h2 className="text-3xl md:text-5xl font-black text-white">
-                  2K+
-                </h2>
-
-                <p className="text-white/70 mt-2 text-sm md:text-base">
-                  Active Agents
-                </p>
               </div>
 
-              <div>
-                <h2 className="text-3xl md:text-5xl font-black text-white">
-                  300+
-                </h2>
+              <h1 className="text-[clamp(2.8rem,9vw,4.5rem)] font-black leading-[0.96] text-white lg:text-[clamp(4rem,6vw,4.75rem)]">
+                Zonal Realty
+              </h1>
 
-                <p className="text-white/70 mt-2 text-sm md:text-base">
-                  Developers
-                </p>
+              <p className="mt-7 max-w-[650px] text-base font-medium leading-7 text-white lg:text-lg lg:leading-8">
+                Find the right home, investment property, or project launch
+                through a curated marketplace backed by trusted developers and
+                licensed real estate professionals.
+              </p>
+
+              <div className="mt-6 grid max-w-[680px] gap-3 text-sm font-semibold text-white sm:grid-cols-3">
+                {[
+                  'Verified property listings',
+                  'Projects from trusted developers',
+                  'Agent-assisted buying',
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="flex min-h-[56px] items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur-sm lg:px-4"
+                  >
+                    <CheckCircle className="h-4 w-4 shrink-0 text-[#d6a54c]" />
+                    <span>{item}</span>
+                  </div>
+                ))}
               </div>
-
-              <div>
-                <h2 className="text-3xl md:text-5xl font-black text-white">
-                  1,200+
-                </h2>
-
-                <p className="text-white/70 mt-2 text-sm md:text-base">
-                  Properties
-                </p>
-              </div>
-
             </div>
-
           </div>
 
-          <div className="relative z-30 mt-16 translate-y-8">
-            <SearchBox
-              filters={filters}
-              onFilterChange={setFilters}
-              onSearch={handleSearchProperties}
-            />
+          <div className="relative z-40 mt-8 px-5 md:px-8 xl:px-12">
+            <div className="mx-auto max-w-[1120px]">
+              <SearchBox
+                filters={filters}
+                onFilterChange={setFilters}
+                onSearch={handleSearchProperties}
+              />
+            </div>
           </div>
 
+          <div className="relative z-30 mt-8">
+            <HomeStatsStrip />
+          </div>
         </div>
-
       </div>
 
       {/* ABOUT */}
       <section
   id="about"
-  className="relative bg-[#faf8f5] py-36 overflow-hidden"
+  className="relative bg-[#faf8f5] py-20 overflow-hidden sm:py-24 lg:py-28 xl:py-32"
 >
   {/* GLOW EFFECTS */}
   <div className="absolute top-20 left-10 w-72 h-72 bg-[#d6a77a]/20 rounded-full blur-[120px]"></div>
 
   <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-200/30 rounded-full blur-[140px]"></div>
 
-  <div className="max-w-7xl mx-auto px-6 md:px-12">
+  <div className="max-w-7xl mx-auto px-5 sm:px-6 md:px-8 xl:px-12">
 
-    <div className="grid lg:grid-cols-2 gap-24 items-center">
+    <div className="grid gap-12 items-center lg:grid-cols-2 lg:gap-14 xl:gap-24">
 
       {/* LEFT */}
       <div>
 
-        <p className="uppercase tracking-[6px] text-[#8b5e3c] font-bold mb-5">
+        <p className="uppercase tracking-[0.28em] text-[#8b5e3c] font-bold mb-5 text-sm">
           About Zonal Realty
         </p>
 
-        <h2 className="text-5xl md:text-7xl font-black text-[#2d1f18] leading-[0.95]">
+        <h2 className="text-[clamp(2.5rem,8vw,4.25rem)] font-black text-[#2d1f18] leading-[0.95]">
           Next Generation
           <br />
           Real Estate
@@ -355,10 +322,10 @@ function Hero() {
           transparency and growth.
         </p>
 
-        <div className="grid grid-cols-3 gap-8 mt-12">
+        <div className="grid grid-cols-1 gap-6 mt-10 sm:grid-cols-3 lg:gap-8 lg:mt-12">
 
           <div>
-            <h3 className="text-4xl font-black text-[#2d1f18]">
+            <h3 className="text-3xl lg:text-4xl font-black text-[#2d1f18]">
               2K+
             </h3>
 
@@ -368,7 +335,7 @@ function Hero() {
           </div>
 
           <div>
-            <h3 className="text-4xl font-black text-[#2d1f18]">
+            <h3 className="text-3xl lg:text-4xl font-black text-[#2d1f18]">
               300+
             </h3>
 
@@ -378,7 +345,7 @@ function Hero() {
           </div>
 
           <div>
-            <h3 className="text-4xl font-black text-[#2d1f18]">
+            <h3 className="text-3xl lg:text-4xl font-black text-[#2d1f18]">
               1.2K+
             </h3>
 
@@ -404,17 +371,17 @@ function Hero() {
       {/* DEVELOPERS */}
 <section
   id="developers"
-  className="relative bg-[#f8f5f0] py-36 overflow-hidden"
+  className="relative bg-[#f8f5f0] py-20 overflow-hidden sm:py-24 lg:py-28 xl:py-32"
 >
 
   {/* Background Glow */}
   <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#d6a77a]/10 rounded-full blur-[150px]" />
   <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#c9a063]/10 rounded-full blur-[150px]" />
 
-  <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10">
+  <div className="max-w-7xl mx-auto px-5 sm:px-6 md:px-8 xl:px-12 relative z-10">
 
     {/* Heading */}
-    <div className="text-center mb-24">
+    <div className="text-center mb-12 sm:mb-16 lg:mb-20">
 
       <span
         className="
@@ -425,7 +392,7 @@ function Hero() {
           bg-[#d6a77a]/10
           text-[#8b5e3c]
           uppercase
-          tracking-[4px]
+          tracking-[0.24em]
           text-xs
           font-bold
           mb-6
@@ -434,7 +401,7 @@ function Hero() {
         Our Professionals
       </span>
 
-      <h2 className="text-6xl md:text-7xl font-black text-[#2d1f18]">
+      <h2 className="text-[clamp(2.5rem,8vw,4.25rem)] font-black text-[#2d1f18] leading-tight">
         Meet The Experts
       </h2>
 
@@ -446,7 +413,7 @@ function Hero() {
 
     </div>
 
-    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 xl:gap-8">
 
   {[
     {
@@ -503,8 +470,8 @@ function Hero() {
       className="
       group
       relative
-      h-[450px]
-      rounded-[35px]
+      h-[360px]
+      rounded-[24px]
       overflow-hidden
       shadow-[0_20px_50px_rgba(0,0,0,0.15)]
       hover:-translate-y-3
@@ -528,7 +495,7 @@ function Hero() {
 
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
 
-      <div className="absolute inset-4 border border-white/20 rounded-[28px]" />
+      <div className="absolute inset-4 border border-white/20 rounded-[20px]" />
 
       <div className="absolute bottom-6 left-6 right-6">
 
@@ -564,11 +531,11 @@ function Hero() {
 
 </section>
 {/* TRUSTED DEVELOPERS */}
-<section className="relative py-40 bg-[#faf8f5] overflow-hidden">
+<section className="relative py-20 bg-[#faf8f5] overflow-hidden sm:py-24 lg:py-28 xl:py-32">
 
-  <div className="w-full px-6 md:px-12">
+  <div className="w-full px-5 sm:px-6 md:px-8 xl:px-12">
 
-    <div className="text-center mb-20">
+    <div className="text-center mb-12 sm:mb-16">
 
       <span className="
         px-5 py-2
@@ -576,14 +543,14 @@ function Hero() {
         bg-[#d6a77a]/10
         text-[#8b5e3c]
         uppercase
-        tracking-[4px]
+        tracking-[0.24em]
         text-xs
         font-bold
       ">
         Trusted Developers
       </span>
 
-      <h2 className="mt-6 text-5xl md:text-6xl font-black text-[#2d1f18]">
+      <h2 className="mt-6 text-[clamp(2.25rem,7vw,3.75rem)] font-black text-[#2d1f18] leading-tight">
         Partner Developers
       </h2>
 
@@ -593,48 +560,48 @@ function Hero() {
 
     </div>
 
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5 xl:gap-8">
 
       {[
         {
           name: 'Ayala Land',
-          logo: 'https://upload.wikimedia.org/wikipedia/en/7/7f/Ayala_Land_logo.svg',
+          mark: 'AL',
         },
         {
           name: 'Megaworld',
-          logo: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Megaworld_Corporation_logo.svg',
+          mark: 'MW',
         },
         {
           name: 'SMDC',
-          logo: 'https://www.smdc.com/content/dam/smdc/logo/smdc-logo.svg',
+          mark: 'SM',
         },
         {
           name: 'DMCI Homes',
-          logo: 'https://www.dmcihomes.com/themes/dmci/images/logo.svg',
+          mark: 'DM',
         },
         {
           name: 'Vista Land',
-          logo: 'https://www.vistaland.com.ph/wp-content/uploads/2022/03/logo.png',
+          mark: 'VL',
         },
         {
           name: 'Filinvest',
-          logo: 'https://www.filinvestland.com/wp-content/themes/filinvest/assets/images/logo.svg',
+          mark: 'FI',
         },
         {
           name: 'Federal Land',
-          logo: 'https://federallandph.com/wp-content/uploads/2021/08/logo.png',
+          mark: 'FL',
         },
         {
           name: 'Robinsons Land',
-          logo: 'https://www.robinsonsland.com/sites/default/files/rli-logo.png',
+          mark: 'RL',
         },
         {
           name: 'Shang Properties',
-          logo: 'https://www.shangproperties.com/wp-content/themes/shang/images/logo.png',
+          mark: 'SP',
         },
         {
           name: 'Century Properties',
-          logo: 'https://century-properties.com/wp-content/uploads/2022/06/logo.png',
+          mark: 'CP',
         },
       ].map((dev, index) => (
 
@@ -642,9 +609,9 @@ function Hero() {
           key={index}
           className="
           bg-white
-          rounded-[30px]
-          p-8
-          h-[180px]
+          rounded-[24px]
+          p-6
+          min-h-[150px]
           flex
           flex-col
           items-center
@@ -657,11 +624,24 @@ function Hero() {
           "
         >
 
-          <img
-            src={dev.logo}
-            alt={dev.name}
-            className="h-12 object-contain"
-          />
+          <div
+            className="
+              flex
+              h-16
+              w-16
+              items-center
+              justify-center
+              rounded-2xl
+              bg-[#2d1f18]
+              text-xl
+              font-black
+              text-[#d6a77a]
+              shadow-inner
+            "
+            aria-hidden="true"
+          >
+            {dev.mark}
+          </div>
 
           <p className="mt-5 font-semibold text-[#2d1f18] text-center">
             {dev.name}
@@ -678,13 +658,13 @@ function Hero() {
 {/* FEATURED PROPERTIES */}
 <section
   id="properties"
-  className="py-40 bg-[#f6f1eb]"
+  className="py-20 bg-[#f6f1eb] sm:py-24 lg:py-28 xl:py-32"
 >
 
-  <div className="max-w-7xl mx-auto px-6 md:px-12">
+  <div className="max-w-7xl mx-auto px-5 sm:px-6 md:px-8 xl:px-12">
 
     {/* HEADING */}
-    <div className="text-center mb-20">
+    <div className="text-center mb-12 sm:mb-16">
 
       <span
         className="
@@ -695,7 +675,7 @@ function Hero() {
           bg-[#d6a77a]/10
           text-[#8b5e3c]
           uppercase
-          tracking-[4px]
+          tracking-[0.24em]
           text-xs
           font-bold
           mb-6
@@ -704,7 +684,7 @@ function Hero() {
         Featured Properties
       </span>
 
-      <h2 className="text-6xl md:text-7xl font-black text-[#2d1f18]">
+      <h2 className="text-[clamp(2.5rem,8vw,4.25rem)] font-black text-[#2d1f18] leading-tight">
         Popular Listings
       </h2>
 
@@ -717,7 +697,7 @@ function Hero() {
     </div>
 
     {/* PROPERTY GRID */}
-    <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-8">
+    <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6 xl:gap-8">
 
       {filteredProperties.map((property, index) => (
 
@@ -725,7 +705,7 @@ function Hero() {
           key={index}
           className="
             bg-white
-            rounded-[32px]
+            rounded-[24px]
             overflow-hidden
             shadow-lg
             hover:shadow-2xl
@@ -766,7 +746,7 @@ function Hero() {
 
           </div>
 
-          <div className="p-6 flex flex-col min-h-[230px]">
+          <div className="p-5 sm:p-6 flex flex-col min-h-[230px]">
 
   <p className="text-[#a56b3f] text-sm font-medium uppercase tracking-wide">
     {property.location}
@@ -775,7 +755,7 @@ function Hero() {
   <h3
     className="
       mt-2
-      text-[26px]
+      text-2xl
       leading-tight
       font-serif
       font-semibold
@@ -788,11 +768,11 @@ function Hero() {
   {/* Spacer */}
   <div className="flex-1"></div>
 
-  <div className="flex items-center justify-between pt-6">
+  <div className="flex flex-col gap-4 pt-6 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
 
     <span
       className="
-        text-[34px]
+        text-3xl
         font-black
         text-[#d2a06b]
       "
@@ -806,7 +786,7 @@ function Hero() {
       className="
         bg-[#2d1f18]
         text-white
-        px-6
+        px-5
         py-3
         rounded-xl
         font-medium
@@ -839,6 +819,31 @@ function Hero() {
 
     </div>
 
+    <div className="mt-14 flex justify-center">
+      <Link
+        to="/properties"
+        className="
+          inline-flex
+          items-center
+          justify-center
+          rounded-2xl
+          bg-[#2d1f18]
+          px-8
+          py-4
+          text-base
+          font-bold
+          text-white
+          shadow-xl
+          transition
+          duration-300
+          hover:-translate-y-1
+          hover:bg-[#3f2c22]
+        "
+      >
+        Explore More Properties
+      </Link>
+    </div>
+
   </div>
 
 </section>
@@ -851,16 +856,16 @@ function Hero() {
 )}
 
 {/* FOOTER */}
-<footer className="relative bg-[#111111] overflow-hidden">
+<footer id="contact" className="relative bg-[#111111] overflow-hidden">
 
   {/* Glow */}
   <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#d6a77a]/10 rounded-full blur-[150px]" />
   <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#d6a77a]/10 rounded-full blur-[150px]" />
 
-  <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 py-24">
+  <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-6 md:px-8 xl:px-12 py-16 lg:py-24">
 
     {/* TOP */}
-    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-16 pb-16 border-b border-white/10">
+    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-16 pb-12 lg:pb-16 border-b border-white/10">
 
       {/* BRAND */}
       <div>
@@ -1041,6 +1046,73 @@ function Hero() {
   )
 }
 
+function HomeStatsStrip() {
+  const stats = [
+    {
+      value: '2K+',
+      label: 'Active Agents',
+      icon: UsersRound,
+      variant: 'dark',
+    },
+    {
+      value: '300+',
+      label: 'Developers',
+      icon: Building2,
+      variant: 'gold',
+    },
+    {
+      value: '1,200+',
+      label: 'Properties',
+      icon: House,
+      variant: 'dark',
+    },
+    {
+      value: '98%',
+      label: 'Customer Satisfaction',
+      icon: TrendingUp,
+      variant: 'gold',
+    },
+  ]
+
+  return (
+    <div className="relative z-10 border-t border-white/10 bg-black/35 py-8 backdrop-blur-sm md:py-9">
+      <div className="mx-auto grid max-w-[1040px] grid-cols-1 gap-6 px-6 sm:grid-cols-2 md:grid-cols-4 md:gap-0 md:px-10 lg:px-0">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon
+          const isGold = stat.variant === 'gold'
+
+          return (
+            <div
+              key={stat.label}
+              className={`flex items-center gap-5 md:px-8 ${
+                index < stats.length - 1 ? 'md:border-r md:border-white/20' : ''
+              }`}
+            >
+              <div
+                className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-lg shadow-lg ${
+                  isGold ? 'bg-[#d2a24f]' : 'bg-[#030b22]'
+                }`}
+              >
+                <Icon className="h-8 w-8 text-white" strokeWidth={2.5} />
+              </div>
+
+              <div>
+                <p className="text-3xl font-black leading-none text-white">
+                  {stat.value}
+                </p>
+
+                <p className="mt-2 text-sm leading-tight text-white/75">
+                  {stat.label}
+                </p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function PropertyDetailsModal({ property, onClose }) {
   const agents = availableAgents.filter((agent) =>
     property.agentIds.includes(agent.id)
@@ -1048,8 +1120,8 @@ function PropertyDetailsModal({ property, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 px-4 py-6 backdrop-blur-sm">
-      <div className="mx-auto w-full max-w-6xl overflow-hidden rounded-[28px] bg-[#fbf8f3] shadow-2xl">
-        <div className="relative h-[280px] overflow-hidden md:h-[420px]">
+      <div className="mx-auto w-full max-w-6xl overflow-hidden rounded-[22px] bg-[#fbf8f3] shadow-2xl md:rounded-[28px]">
+        <div className="relative h-[260px] overflow-hidden md:h-[420px]">
           <img
             src={property.image}
             alt={property.title}
@@ -1072,11 +1144,11 @@ function PropertyDetailsModal({ property, onClose }) {
               Featured Listing
             </p>
 
-            <h2 className="mt-4 text-4xl font-black leading-tight md:text-6xl">
+            <h2 className="mt-4 text-[clamp(2rem,9vw,3.75rem)] font-black leading-tight">
               {property.title}
             </h2>
 
-            <p className="mt-3 flex items-center gap-2 text-lg text-white/80">
+            <p className="mt-3 flex items-center gap-2 text-base text-white/80 md:text-lg">
               <MapPin className="h-5 w-5" />
               {property.location}
             </p>
@@ -1091,12 +1163,12 @@ function PropertyDetailsModal({ property, onClose }) {
                   Property Details
                 </p>
 
-                <h3 className="mt-2 text-4xl font-black text-[#2d1f18]">
+                <h3 className="mt-2 text-3xl font-black text-[#2d1f18] md:text-4xl">
                   {formatPrice(property)}
                 </h3>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4 md:w-auto">
                 <Spec icon={BedDouble} label="Beds" value={property.beds} />
                 <Spec icon={Bath} label="Baths" value={property.baths} />
                 <Spec icon={Car} label="Parking" value={property.parking} />

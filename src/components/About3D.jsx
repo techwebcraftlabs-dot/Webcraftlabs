@@ -1,6 +1,6 @@
 function AboutVisual() {
   return (
-    <div className="relative h-[450px] md:h-[600px] overflow-hidden rounded-[32px] md:rounded-[40px] shadow-2xl">
+    <div className="relative h-[320px] overflow-hidden rounded-[24px] shadow-2xl sm:h-[420px] md:rounded-[32px] lg:h-[520px] xl:h-[600px]">
 
       <img
         src="https://images.unsplash.com/photo-1511818966892-d7d671e672a2?q=80&w=1600&auto=format&fit=crop"

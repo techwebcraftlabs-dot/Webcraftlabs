@@ -1,12 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-} from "firebase/firestore";
 
-import { db } from "../firebase";
+import { brsApi } from "../lib/api";
 
 const initialFormData = {
   brsId: "",
@@ -117,7 +112,7 @@ function AddBRS() {
     try {
       setSaving(true);
 
-      await addDoc(collection(db, "brs"), {
+      await brsApi.create({
         ...formData,
         amountDue: Number(cleanNumber(formData.amountDue)) || 0,
         developerDeductions:
@@ -130,9 +125,8 @@ function AddBRS() {
             taxable: !["developer", "zonal"].includes(
               row.role.toLowerCase()
             ),
-          })),
+        })),
         status: "For Approval",
-        createdAt: serverTimestamp(),
       });
 
       alert("BRS saved successfully.");
@@ -154,7 +148,7 @@ function AddBRS() {
           </h1>
 
           <p className="text-gray-500 mt-2">
-            Create a buyer registration sheet
+            Create a buyer reservation system
           </p>
         </div>
 
@@ -176,7 +170,7 @@ function AddBRS() {
         </div>
       </div>
 
-      <FormSection title="Buyer's Registration Sheet">
+      <FormSection title="Buyer's Reservation System">
         <TextField
           label="BRS No."
           name="brsId"

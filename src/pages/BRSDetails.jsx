@@ -1,14 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  collection,
-  doc,
-  onSnapshot,
-  serverTimestamp,
-  updateDoc,
-} from "firebase/firestore";
 
-import { db } from "../firebase";
+import { brsApi, voucherApi } from "../lib/api";
 
 function BRSDetails({ selectedBRSId, setActivePage }) {
   const navigate = useNavigate();
@@ -34,12 +27,9 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
       return undefined;
     }
 
-    const unsubscribe = onSnapshot(
-      doc(db, "brs", recordId),
-      (snapshot) => {
-        const nextRecord = snapshot.exists()
-          ? { id: snapshot.id, ...snapshot.data() }
-          : null;
+    const loadRecord = async () => {
+      try {
+        const nextRecord = await brsApi.get(recordId);
 
         setRecord(nextRecord);
         setStatusDraft(nextRecord?.status || "For Approval");
@@ -52,15 +42,14 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
           );
         }
         setLoading(false);
-      },
-      (error) => {
+      } catch (error) {
         console.error(error);
         alert(error.message);
         setLoading(false);
       }
-    );
+    };
 
-    return () => unsubscribe();
+    loadRecord();
   }, [recordId]);
 
   useEffect(() => {
@@ -68,14 +57,9 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
       return undefined;
     }
 
-    const unsubscribe = onSnapshot(
-      collection(db, "commissionVouchers"),
-      (snapshot) => {
-        const records = snapshot.docs
-          .map((item) => ({
-            id: item.id,
-            ...item.data(),
-          }))
+    const loadVouchers = async () => {
+      try {
+        const records = (await voucherApi.list())
           .filter((item) => item.brsDocId === recordId)
           .sort((a, b) => {
             const dateA =
@@ -89,14 +73,13 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
           });
 
         setVouchers(records);
-      },
-      (error) => {
+      } catch (error) {
         console.error(error);
         alert(error.message);
       }
-    );
+    };
 
-    return () => unsubscribe();
+    loadVouchers();
   }, [recordId]);
 
   const summary = useMemo(
@@ -180,7 +163,7 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
     try {
       setSaving(true);
 
-      await updateDoc(doc(db, "brs", record.id), {
+      await brsApi.update(record.id, {
         ...formData,
         amountDue: Number(cleanNumber(formData.amountDue)) || 0,
         developerDeductions:
@@ -194,7 +177,6 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
               String(row.role || "").toLowerCase()
             ),
           })),
-        updatedAt: serverTimestamp(),
       });
 
       setEditing(false);
@@ -215,9 +197,8 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
     try {
       setSavingStatus(true);
 
-      await updateDoc(doc(db, "brs", record.id), {
+      await brsApi.patch(record.id, {
         status: value,
-        updatedAt: serverTimestamp(),
       });
 
       if (setActivePage) {

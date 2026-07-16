@@ -1,15 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  serverTimestamp,
-} from "firebase/firestore";
 
-import { db } from "../firebase";
+import { brsApi, voucherApi } from "../lib/api";
 
 function Commission() {
   const navigate = useNavigate();
@@ -46,56 +38,41 @@ function Commission() {
   const [savingVoucher, setSavingVoucher] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "brs"),
-      (snapshot) => {
-        const records = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        setBrsRecords(records);
-      },
-      (error) => {
+    const loadBRS = async () => {
+      try {
+        setBrsRecords(await brsApi.list());
+      } catch (error) {
         console.error(error);
         alert(error.message);
       }
-    );
+    };
 
-    return () => unsubscribe();
+    loadBRS();
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "commissionVouchers"),
-      (snapshot) => {
-        const records = snapshot.docs.map((item) => ({
-          id: item.id,
-          ...item.data(),
-        }));
-
+    const loadVouchers = async () => {
+      try {
+        const records = await voucherApi.list();
         records.sort((a, b) => {
           const dateA =
-            a.createdAt?.toMillis?.() ||
             new Date(a.voucherDate || 0).getTime();
           const dateB =
-            b.createdAt?.toMillis?.() ||
             new Date(b.voucherDate || 0).getTime();
 
           return dateB - dateA;
         });
 
         setVoucherRecords(records);
-        setVoucherLoading(false);
-      },
-      (error) => {
+      } catch (error) {
         console.error(error);
         alert(error.message);
+      } finally {
         setVoucherLoading(false);
       }
-    );
+    };
 
-    return () => unsubscribe();
+    loadVouchers();
   }, []);
 
   const uniqueValues = (field, records = brsRecords) =>
@@ -275,7 +252,7 @@ function Commission() {
     try {
       setSavingVoucher(true);
 
-      const voucherDoc = await addDoc(collection(db, "commissionVouchers"), {
+      const voucherDoc = await voucherApi.create({
         voucherBatchId: currentVoucherBatchId,
         voucherNo: currentVoucherBatchId,
         brsDocId: selectedRecord.id,
@@ -295,11 +272,11 @@ function Commission() {
         voucherPreview,
         status: "For Release",
         computationStatus: "Pending",
-        createdAt: serverTimestamp(),
       });
 
       setSelectedVoucherId(voucherDoc.id);
       setCurrentVoucherIds((current) => [voucherDoc.id, ...current]);
+      setVoucherRecords(await voucherApi.list());
       alert("Voucher recorded successfully.");
       clearBuyerSelection();
     } catch (error) {
@@ -320,10 +297,11 @@ function Commission() {
     }
 
     try {
-      await deleteDoc(doc(db, "commissionVouchers", voucherId));
+      await voucherApi.delete(voucherId);
       setCurrentVoucherIds((current) =>
         current.filter((id) => id !== voucherId)
       );
+      setVoucherRecords(await voucherApi.list());
 
       if (selectedVoucherId === voucherId) {
         setSelectedVoucherId('');

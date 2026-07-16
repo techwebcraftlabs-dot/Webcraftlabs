@@ -3,12 +3,16 @@ import {
   Routes,
   Route,
   useLocation,
+  Navigate,
 } from "react-router-dom";
+import { useState } from "react";
 
 import Navbar from "./components/Navbar";
+import LoginModal from "./components/LoginModal";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 import Home from "./pages/Home";
-import Login from "./pages/Login";
+import Properties from "./pages/Properties";
 import Dashboard from "./pages/Dashboard";
 import Calculation from "./pages/Calculation";
 import RateDistribution from "./pages/RateDistribution";
@@ -18,10 +22,17 @@ import AgentDetails from "./pages/AgentDetails";
 
 function Layout() {
   const location = useLocation();
+  const [showLogin, setShowLogin] = useState(false);
 
   return (
     <>
-      {location.pathname === "/" && <Navbar />}
+      {location.pathname === "/" && (
+        <Navbar onLoginClick={() => setShowLogin(true)} />
+      )}
+
+      {showLogin && (
+        <LoginModal onClose={() => setShowLogin(false)} />
+      )}
 
       <Routes>
         <Route
@@ -30,48 +41,85 @@ function Layout() {
         />
 
         <Route
+          path="/properties"
+          element={<Properties />}
+        />
+
+        <Route
           path="/login"
-          element={<Login />}
+          element={<Navigate to="/" replace />}
         />
 
         <Route
           path="/dashboard"
-          element={<Dashboard />}
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
         />
 
         <Route
           path="/agents/:id"
-          element={<AgentDetails />}
+          element={
+            <ProtectedRoute>
+              <AgentDetails />
+            </ProtectedRoute>
+          }
         />
 
         <Route
           path="/calculation"
-          element={<Calculation />}
+          element={
+            <ProtectedRoute>
+              <Calculation />
+            </ProtectedRoute>
+          }
         />
 
         <Route
           path="/calculation/:buyerId"
-          element={<Calculation />}
+          element={
+            <ProtectedRoute>
+              <Calculation />
+            </ProtectedRoute>
+          }
         />
 
         <Route
           path="/RateDistribution"
-          element={<RateDistribution />}
+          element={
+            <ProtectedRoute>
+              <RateDistribution />
+            </ProtectedRoute>
+          }
         />
 
         <Route
           path="/add-brs"
-          element={<AddBRS />}
+          element={
+            <ProtectedRoute>
+              <AddBRS />
+            </ProtectedRoute>
+          }
         />
 
         <Route
           path="/brs-details"
-          element={<BRSDetails />}
+          element={
+            <ProtectedRoute>
+              <BRSDetails />
+            </ProtectedRoute>
+          }
         />
 
         <Route
           path="/brs-details/:id"
-          element={<BRSDetails />}
+          element={
+            <ProtectedRoute>
+              <BRSDetails />
+            </ProtectedRoute>
+          }
         />
       </Routes>
     </>

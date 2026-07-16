@@ -23,14 +23,12 @@ function Sidebar({
     'Agent'
 
   const handleLogout = () => {
-
     localStorage.clear()
     sessionStorage.clear()
 
     navigate('/', {
       replace: true,
     })
-
   }
 
   const menus = {
@@ -160,9 +158,9 @@ function Sidebar({
       className="
         w-[280px]
         h-full
-        bg-white
+        bg-[#fbfcfe]
         border-r
-        border-gray-200
+        border-[#e5ebf3]
         px-6
         py-8
         flex
@@ -175,11 +173,11 @@ function Sidebar({
 
         <div className="mb-10">
 
-          <h1 className="text-3xl font-black text-[#1f2937] mt-4">
+          <h1 className="text-3xl font-black tracking-tight text-[#172033] mt-4">
             ZONAL
           </h1>
 
-          <p className="text-gray-400 text-sm">
+          <p className="text-[#7b8797] text-sm">
             Realty Management
           </p>
 
@@ -191,8 +189,8 @@ function Sidebar({
               px-3
               py-1
               rounded-full
-              bg-[#eef2ff]
-              text-[#4f5dff]
+              bg-[#f3eadc]
+              text-[#8a5d20]
               text-xs
               font-semibold
             "
@@ -222,20 +220,23 @@ function Sidebar({
                   gap-4
                   px-4
                   py-4
-                  rounded-2xl
+                  rounded-xl
                   transition-all
-                  font-medium
+                  font-semibold
 
                   ${
                     activePage === item.key
                       ? `
-                        bg-[#eef2ff]
-                        text-[#4f5dff]
-                        shadow-sm
+                        bg-white
+                        text-[#172033]
+                        shadow-[0_10px_25px_rgba(15,23,42,0.07)]
+                        ring-1
+                        ring-[#e7ecf3]
                       `
                       : `
-                        text-gray-600
-                        hover:bg-gray-100
+                        text-[#526071]
+                        hover:bg-white
+                        hover:text-[#172033]
                       `
                   }
                 `}
@@ -267,11 +268,13 @@ function Sidebar({
             items-center
             justify-center
             gap-3
-            bg-red-500
-            hover:bg-red-600
-            text-white
+            border
+            border-[#f1c7c7]
+            bg-[#fff5f5]
+            hover:bg-[#fee2e2]
+            text-[#b42318]
             py-4
-            rounded-2xl
+            rounded-xl
             transition-all
             font-semibold
           "

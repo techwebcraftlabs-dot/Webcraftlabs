@@ -1,18 +1,7 @@
 import { useState } from 'react'
-import {
-  signInWithEmailAndPassword,
-  signOut,
-} from 'firebase/auth'
 import { useNavigate } from 'react-router-dom'
 
-import { auth, db } from '../firebase'
-
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-} from 'firebase/firestore'
+import { authApi } from '../lib/api'
 
 function Login() {
   const navigate = useNavigate()
@@ -35,110 +24,45 @@ function Login() {
     try {
       setLoading(true)
 
-      const userCredential =
-        await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        )
+      const session = await authApi.login({
+        email,
+        password,
+      })
 
-      const user =
-        userCredential.user
-
-      const q = query(
-        collection(db, 'agents'),
-        where(
-          'zonalEmail',
-          '==',
-          user.email
-        )
+      localStorage.setItem(
+        'role',
+        session.role
       )
 
-      const snapshot =
-        await getDocs(q)
+      localStorage.setItem(
+        'fullName',
+        session.fullName
+      )
 
-      if (!snapshot.empty) {
-        const agentData =
-          snapshot.docs[0].data()
+      localStorage.removeItem('agentId')
+      localStorage.removeItem('agentData')
 
-        if (agentData.status !== 'Active') {
-          await signOut(auth)
-          alert(
-            'Your account is still for approval.'
-          )
-          return
-        }
-
-        localStorage.setItem(
-          'role',
-          agentData.role ||
-            'Agent'
-        )
-
-        localStorage.setItem(
-          'fullName',
-          `${agentData.firstName || ''} ${
-            agentData.lastName || ''
-          }`
-        )
-
+      if (session.agentId) {
         localStorage.setItem(
           'agentId',
-          snapshot.docs[0].id
+          session.agentId
         )
 
         localStorage.setItem(
           'agentData',
-          JSON.stringify(agentData)
-        )
-      } else {
-        localStorage.setItem(
-          'role',
-          'Administrator'
-        )
-
-        localStorage.setItem(
-          'fullName',
-          'Administrator'
+          JSON.stringify(
+            session.agentData
+          )
         )
       }
 
-      navigate('/Dashboard')
+      navigate('/dashboard', {
+        replace: true,
+      })
     } catch (error) {
       console.log(error)
 
-      let Message =
-        'Login failed.'
-
-      switch (error.code) {
-        case 'auth/invalid-email':
-          Message =
-            'Invalid email format.'
-          break
-
-        case 'auth/user-disabled':
-          Message =
-            'Account disabled.'
-          break
-
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          Message =
-            'Incorrect email or password.'
-          break
-
-        case 'auth/too-many-requests':
-          Message =
-            'Too many login attempts. Try again later.'
-          break
-
-        default:
-          Message =
-            error.message
-      }
-
-      alert(Message)
+      alert(error.message)
     } finally {
       setLoading(false)
     }

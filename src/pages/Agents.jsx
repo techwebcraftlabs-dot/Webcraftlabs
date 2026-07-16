@@ -1,20 +1,12 @@
-import { db, auth } from '../firebase';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  createUserWithEmailAndPassword
-} from 'firebase/auth';
 import {
   Plus,
   Search,
   ArrowLeft,
 } from 'lucide-react';
-import {
-  collection,
-  addDoc,
-  onSnapshot,
-  serverTimestamp,
-} from 'firebase/firestore';
+
+import { agentApi } from '../lib/api';
 
 const generateRandomPassword = () => {
   const chars =
@@ -72,19 +64,16 @@ const generateZonalEmail = (
 };
   const [agents, setAgents] = useState([]);
 useEffect(() => {
-  const unsubscribe = onSnapshot(
-    collection(db, 'agents'),
-    (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      setAgents(data);
+  const loadAgents = async () => {
+    try {
+      setAgents(await agentApi.list());
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
     }
-  );
+  };
 
-  return () => unsubscribe();
+  loadAgents();
 }, []);
 
   const handleChange = (e) => {
@@ -117,15 +106,7 @@ useEffect(() => {
   const handleSave = async () => {
   try {
 
-    await createUserWithEmailAndPassword(
-      auth,
-      formData.zonalEmail,
-      formData.password
-    );
-
-    await addDoc(
-      collection(db, 'agents'),
-      {
+    await agentApi.create({
         hlcCode: formData.hlcCode,
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -145,11 +126,10 @@ useEffect(() => {
         locality: formData.locality,
         team: formData.team,
         status: 'For Approval',
-        createdAt: serverTimestamp(),
-      }
-    );
+    });
 
     alert('Agent Created');
+    setAgents(await agentApi.list());
     setShowForm(false);
 
   } catch (error) {

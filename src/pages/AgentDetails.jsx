@@ -1,13 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-import { db } from "../firebase";
-
-import {
-  doc,
-  getDoc,
-  updateDoc,
-} from "firebase/firestore";
+import { agentApi } from "../lib/api";
 
 function AgentDetails() {
   const { id } = useParams();
@@ -40,12 +34,7 @@ function AgentDetails() {
   useEffect(() => {
     const loadAgent = async () => {
       try {
-        const docRef = doc(db, "agents", id);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          setFormData(docSnap.data());
-        }
+        setFormData(await agentApi.get(id));
       } catch (error) {
         console.error(error);
         alert(error.message);
@@ -64,14 +53,17 @@ function AgentDetails() {
     });
   };
 
+  const returnToAgents = () => {
+    localStorage.setItem("activeDashboardPage", "agents");
+    navigate("/dashboard", { replace: true });
+  };
+
   const handleUpdate = async () => {
     try {
-      await updateDoc(
-        doc(db, "agents", id),
-        formData
-      );
+      await agentApi.update(id, formData);
 
       alert("Agent updated successfully");
+      returnToAgents();
     } catch (error) {
       console.error(error);
       alert(error.message);
@@ -80,19 +72,10 @@ function AgentDetails() {
 
   const handleApprove = async () => {
     try {
-      await updateDoc(
-        doc(db, "agents", id),
-        {
-          status: "Active",
-        }
-      );
-
-      setFormData({
-        ...formData,
-        status: "Active",
-      });
+      await agentApi.approve(id);
 
       alert("Agent approved");
+      returnToAgents();
     } catch (error) {
       console.error(error);
       alert(error.message);
@@ -112,7 +95,7 @@ function AgentDetails() {
 
       <div className="flex items-center gap-4 mb-10">
         <button
-          onClick={() => navigate(-1)}
+          onClick={returnToAgents}
           className="w-12 h-12 rounded-xl bg-gray-100"
         >
           ←
@@ -361,7 +344,7 @@ function AgentDetails() {
       <div className="flex justify-end gap-4 mt-10">
 
         <button
-          onClick={() => navigate(-1)}
+          onClick={returnToAgents}
           className="
             px-6
             py-3
@@ -372,18 +355,20 @@ function AgentDetails() {
           Cancel
         </button>
 
-        <button
-          onClick={handleApprove}
-          className="
-            px-6
-            py-3
-            rounded-xl
-            bg-green-600
-            text-white
-          "
-        >
-          Approve
-        </button>
+        {formData.status === "For Approval" && (
+          <button
+            onClick={handleApprove}
+            className="
+              px-6
+              py-3
+              rounded-xl
+              bg-green-600
+              text-white
+            "
+          >
+            Approve
+          </button>
+        )}
 
         <button
           onClick={handleUpdate}

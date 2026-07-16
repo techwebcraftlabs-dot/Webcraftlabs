@@ -1,46 +1,29 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import {
-  collection,
-  onSnapshot,
-} from "firebase/firestore";
 
-import { db } from "../firebase";
+import { brsApi } from "../lib/api";
 
 function BRS({ setActivePage, setSelectedBRSId }) {
   const navigate = useNavigate();
   const [brsRecords, setBrsRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("For Approval");
+  const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "brs"),
-      (snapshot) => {
-        const records = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        records.sort((a, b) => {
-          const dateA = a.createdAt?.toMillis?.() || 0;
-          const dateB = b.createdAt?.toMillis?.() || 0;
-
-          return dateB - dateA;
-        });
-
+    const loadBRS = async () => {
+      try {
+        const records = await brsApi.list();
         setBrsRecords(records);
-        setLoading(false);
-      },
-      (error) => {
+      } catch (error) {
         console.error(error);
         alert(error.message);
+      } finally {
         setLoading(false);
       }
-    );
+    };
 
-    return () => unsubscribe();
+    loadBRS();
   }, []);
 
   const statusOptions = ["For Approval", "Approved", "Hold"];

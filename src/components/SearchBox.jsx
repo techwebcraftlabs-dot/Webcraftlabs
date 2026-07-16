@@ -1,3 +1,29 @@
+import { Building2, ChevronDown, MapPin, Search, Tag } from 'lucide-react'
+
+const fields = [
+  {
+    name: 'location',
+    label: 'Location',
+    placeholder: 'Choose Location',
+    icon: MapPin,
+    options: ['Makati', 'BGC', 'Cavite', 'Tagaytay', 'Rizal', 'Nuvali', 'Antipolo'],
+  },
+  {
+    name: 'type',
+    label: 'Property Type',
+    placeholder: 'Choose Type',
+    icon: Building2,
+    options: ['Villa', 'Condo', 'House', 'Townhouse', 'Penthouse'],
+  },
+  {
+    name: 'budget',
+    label: 'Price Range',
+    placeholder: 'Select Budget',
+    icon: Tag,
+    options: ['Under 7M', '7M - 15M', '15M+'],
+  },
+]
+
 function SearchBox({ filters, onFilterChange, onSearch }) {
   const updateFilter = (field, value) => {
     onFilterChange?.({
@@ -7,122 +33,88 @@ function SearchBox({ filters, onFilterChange, onSearch }) {
   }
 
   return (
-    <div className="bg-white rounded-[30px] shadow-2xl p-5 md:p-6">
+    <div className="rounded-[18px] bg-white p-3 shadow-[0_22px_55px_rgba(0,0,0,0.20)] sm:p-4">
+      <div className="grid grid-cols-1 items-stretch gap-2 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_200px] xl:grid-cols-[1fr_1fr_1fr_220px]">
+        {fields.map((field) => (
+          <FilterSelect
+            key={field.name}
+            field={field}
+            value={filters?.[field.name] || ''}
+            onChange={(value) => updateFilter(field.name, value)}
+          />
+        ))}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-5 items-center">
-
-        {/* LOCATION */}
-        <div className="bg-[#f8f8f8] rounded-2xl px-5 py-4">
-
-          <p className="text-sm text-gray-500 mb-2">
-            Location
-          </p>
-
-          <select
-            value={filters?.location || ""}
-            onChange={(event) => updateFilter("location", event.target.value)}
-            className="
-              w-full
-              bg-transparent
-              outline-none
-              font-semibold
-              text-[#3b281f]
-              cursor-pointer
-            "
-          >
-            <option value="">Choose Location</option>
-            <option value="Makati">Makati</option>
-            <option value="BGC">BGC</option>
-            <option>Cavite</option>
-            <option>Tagaytay</option>
-            <option>Rizal</option>
-            <option>Nuvali</option>
-            <option>Antipolo</option>
-          </select>
-
-        </div>
-
-        {/* PROPERTY TYPE */}
-        <div className="bg-[#f8f8f8] rounded-2xl px-5 py-4">
-
-          <p className="text-sm text-gray-500 mb-2">
-            Property Type
-          </p>
-
-          <select
-            value={filters?.type || ""}
-            onChange={(event) => updateFilter("type", event.target.value)}
-            className="
-              w-full
-              bg-transparent
-              outline-none
-              font-semibold
-              text-[#3b281f]
-              cursor-pointer
-            "
-          >
-            <option value="">Choose Type</option>
-            <option>Villa</option>
-            <option>Condo</option>
-            <option>House</option>
-            <option>Townhouse</option>
-            <option>Penthouse</option>
-          </select>
-
-        </div>
-
-        {/* PRICE RANGE */}
-        <div className="bg-[#f8f8f8] rounded-2xl px-5 py-4">
-
-          <p className="text-sm text-gray-500 mb-2">
-            Price Range
-          </p>
-
-          <select
-            value={filters?.budget || ""}
-            onChange={(event) => updateFilter("budget", event.target.value)}
-            className="
-              w-full
-              bg-transparent
-              outline-none
-              font-semibold
-              text-[#3b281f]
-              cursor-pointer
-            "
-          >
-            <option value="">Select Budget</option>
-            <option>Under 7M</option>
-            <option>7M - 15M</option>
-            <option>15M+</option>
-          </select>
-
-        </div>
-
-        {/* SEARCH BUTTON */}
         <button
           type="button"
           onClick={onSearch}
           className="
-            h-full
-            min-h-[78px]
-            bg-[#3b281f]
-            hover:bg-[#2a1d17]
+            inline-flex
+            min-h-[56px]
+            items-center
+            justify-center
+            gap-3
+            rounded-lg
+            bg-[#030b22]
+            px-5
+            text-sm
+            font-black
             text-white
-            rounded-2xl
-            font-semibold
-            text-base
             transition-all
             duration-300
-            hover:scale-[1.02]
             shadow-xl
+            hover:-translate-y-0.5
+            hover:bg-[#091840]
+            lg:min-h-[60px]
+            xl:px-8
           "
         >
+          <Search className="h-5 w-5" />
           Search Property
         </button>
-
       </div>
-
     </div>
+  )
+}
+
+function FilterSelect({ field, value, onChange }) {
+  const Icon = field.icon
+
+  return (
+    <label className="flex min-h-[62px] items-center gap-3 rounded-xl border border-[#e6e1dc] px-3 py-3 lg:min-h-[66px] lg:rounded-none lg:border-0 lg:border-r lg:pl-4 lg:pr-5">
+      <Icon className="h-6 w-6 shrink-0 text-[#5f6067]" />
+
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-[#34343a]">
+          {field.label}
+        </span>
+
+        <span className="relative mt-1 block">
+          <select
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            className="
+              w-full
+              cursor-pointer
+              appearance-none
+              bg-transparent
+              pr-7
+              text-base
+              text-[#8a8c94]
+              outline-none
+            "
+          >
+            <option value="">{field.placeholder}</option>
+            {field.options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+
+          <ChevronDown className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8a8c94]" />
+        </span>
+      </span>
+    </label>
   )
 }
 

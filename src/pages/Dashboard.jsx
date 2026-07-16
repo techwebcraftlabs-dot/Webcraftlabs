@@ -5,6 +5,7 @@ import Sidebar from '../components/dashboard/Sidebar'
 import Topbar from '../components/dashboard/Topbar'
 
 import StatsCards from '../components/dashboard/StatsCards'
+import CumulativeSales from '../components/dashboard/CumulativeSales'
 import PropertyGrid from '../components/dashboard/PropertyGrid'
 
 import BRS from './BRS'
@@ -13,6 +14,8 @@ import Commission from './Commission'
 import Calculation from './Calculation'
 import Agents from './Agents'
 import DeveloperVoucher from './DeveloperVoucher'
+import Developers from './Developers'
+import Reports from './Reports'
 function Dashboard() {
 
   const [activePage, setActivePage] =
@@ -37,9 +40,11 @@ function Dashboard() {
         <>
           <Topbar />
 
-          <div className="mt-8">
+          <div>
             <StatsCards />
           </div>
+
+          <CumulativeSales />
 
           <div className="mt-8">
             <PropertyGrid />
@@ -127,24 +132,18 @@ function Dashboard() {
       )
 
     case 'reports':
-      return (
-        <>
-
-          <div className="mt-8 bg-white rounded-[30px] p-10">
-            Reports Page
-          </div>
-        </>
-      )
+  return (
+    <div className="mt-8">
+      <Reports />
+    </div>
+  )
 
     case 'directory':
-      return (
-        <>
-
-          <div className="mt-8 bg-white rounded-[30px] p-10">
-            Directory Page
-          </div>
-        </>
-      )
+  return (
+    <div className="mt-8">
+      <Developers />
+    </div>
+  )
 
     default:
       return (
@@ -168,7 +167,7 @@ function Dashboard() {
     <section
       className="
         flex
-        bg-[#f5f7fb]
+        bg-[#f3f6fa]
         min-h-screen
       "
     >

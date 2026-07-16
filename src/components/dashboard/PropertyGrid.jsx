@@ -27,18 +27,18 @@ function PropertyGrid() {
   ]
 
   return (
-    <div className="mt-10">
+    <div className="mt-8">
 
       {/* HEADER */}
       <div className="flex items-center justify-between mb-6">
 
         <div>
 
-          <h2 className="text-3xl font-black text-[#3b281f]">
+          <h2 className="text-2xl font-black tracking-tight text-[#2f211b]">
             Properties
           </h2>
 
-          <p className="text-gray-500 mt-1">
+          <p className="text-[#64748b] mt-1">
             Newly added premium listings
           </p>
 
@@ -50,7 +50,11 @@ function PropertyGrid() {
             text-white
             px-6
             py-3
-            rounded-2xl
+            rounded-xl
+            font-semibold
+            shadow-[0_12px_24px_rgba(59,40,31,0.18)]
+            transition
+            hover:bg-[#4a3328]
           "
         >
           View All
@@ -59,7 +63,7 @@ function PropertyGrid() {
       </div>
 
       {/* GRID */}
-      <div className="grid md:grid-cols-3 gap-7">
+      <div className="grid md:grid-cols-3 gap-6">
 
         {properties.map((property, index) => (
 
@@ -67,10 +71,13 @@ function PropertyGrid() {
             key={index}
             className="
               bg-white
-              rounded-[30px]
+              rounded-3xl
               overflow-hidden
-              shadow-sm
-              hover:-translate-y-2
+              border
+              border-[#e7ecf3]
+              shadow-[0_14px_35px_rgba(15,23,42,0.05)]
+              hover:-translate-y-1
+              hover:shadow-[0_18px_45px_rgba(15,23,42,0.08)]
               transition-all
               duration-300
             "
@@ -82,7 +89,7 @@ function PropertyGrid() {
               alt=""
               className="
                 w-full
-                h-[240px]
+                h-[220px]
                 object-cover
               "
             />
@@ -90,23 +97,24 @@ function PropertyGrid() {
             {/* CONTENT */}
             <div className="p-6">
 
-              <h3 className="text-2xl font-bold text-[#3b281f]">
+              <h3 className="text-xl font-black text-[#2f211b]">
                 {property.title}
               </h3>
 
-              <p className="text-gray-500 mt-2">
+              <p className="text-[#64748b] mt-2">
                 {property.location}
               </p>
 
               <div className="mt-6 flex items-center justify-between">
 
-                <h2 className="text-2xl font-black text-[#3b281f]">
+                <h2 className="text-2xl font-black text-[#2f211b]">
                   {property.price}
                 </h2>
 
                 <button
                   className="
                     bg-[#c9a063]
+                    text-[#2f211b]
                     px-5
                     py-2
                     rounded-xl
