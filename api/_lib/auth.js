@@ -159,10 +159,12 @@ function verifyRequestOrigin(req) {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return;
   const origin = req.headers?.origin;
   const host = req.headers?.host;
+  const frontendOrigin = process.env.FRONTEND_ORIGIN;
   const fetchSite = String(req.headers?.["sec-fetch-site"] || "").toLowerCase();
   if (fetchSite === "cross-site") throw publicError(403, "Invalid request origin.");
   if ((!origin || !host) && isProduction()) throw publicError(403, "Missing request origin.");
   if (!origin || !host) return;
+  if (frontendOrigin && origin === frontendOrigin) return;
   const originHost = new URL(origin).host;
   const left = Buffer.from(originHost);
   const right = Buffer.from(String(host));
