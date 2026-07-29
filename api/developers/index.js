@@ -1,5 +1,6 @@
 import { query } from "../_lib/db.js";
 import { handleError, readJson, sendJson } from "../_lib/http.js";
+import { requireSession } from "../_lib/auth.js";
 
 const selectFields = `
   id,
@@ -34,8 +35,13 @@ function pickDeveloperPayload(body) {
   );
 }
 
+function parseDeveloperRate(value) {
+  return Number(String(value || "").replace(/[%\s,]/g, "")) || 0;
+}
+
 export default async function handler(req, res) {
   try {
+    await requireSession(req, req.method === "POST" ? { roles: ["Administrator"] } : undefined);
     if (req.method === "GET") {
       const developers = await query(
         `SELECT ${selectFields}
@@ -57,7 +63,7 @@ export default async function handler(req, res) {
 
       const payload = pickDeveloperPayload({
         ...body,
-        developerRate: Number(body.developerRate) || 0,
+        developerRate: parseDeveloperRate(body.developerRate),
         status: body.status || "Active",
       });
       const fields = Object.keys(payload);
@@ -80,4 +86,4 @@ export default async function handler(req, res) {
   }
 }
 
-export { columnMap, pickDeveloperPayload, selectFields };
+export { columnMap, parseDeveloperRate, pickDeveloperPayload, selectFields };

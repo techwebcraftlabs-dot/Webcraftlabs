@@ -5,7 +5,7 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Navbar from "./components/Navbar";
 import LoginModal from "./components/LoginModal";
@@ -23,6 +23,29 @@ import AgentDetails from "./pages/AgentDetails";
 function Layout() {
   const location = useLocation();
   const [showLogin, setShowLogin] = useState(false);
+
+  useEffect(() => {
+    const dashboardPaths = ['/dashboard', '/agents/', '/calculation', '/RateDistribution', '/add-brs', '/brs-details'];
+    const isDashboardRoute = dashboardPaths.some((path) => location.pathname === path || location.pathname.startsWith(path));
+    document.documentElement.classList.toggle('dark', isDashboardRoute && localStorage.getItem('dashboardTheme') === 'dark');
+    document.body.classList.toggle('dashboard-theme', isDashboardRoute);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const preventNumberWheelChange = (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.type !== "number") return;
+      if (document.activeElement !== input) return;
+      event.preventDefault();
+      input.blur();
+    };
+
+    document.addEventListener("wheel", preventNumberWheelChange, {
+      capture: true,
+      passive: false,
+    });
+    return () => document.removeEventListener("wheel", preventNumberWheelChange, true);
+  }, []);
 
   return (
     <>

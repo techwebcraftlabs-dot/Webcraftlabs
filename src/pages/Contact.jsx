@@ -1,10 +1,10 @@
 function Contact() {
   return (
-    <section className="min-h-screen bg-[#f7f3ef] flex items-center justify-center px-6">
+    <section className="min-h-screen bg-[#f8fafc] flex items-center justify-center px-6">
 
       <div className="bg-white shadow-2xl rounded-3xl p-10 w-full max-w-2xl">
 
-        <h1 className="text-5xl font-black text-[#2d1f18] mb-8">
+        <h1 className="text-5xl font-black text-[#111827] mb-8">
           Contact Us
         </h1>
 
@@ -28,7 +28,7 @@ function Contact() {
             className="w-full bg-[#f5f5f5] px-6 py-4 rounded-xl outline-none"
           ></textarea>
 
-          <button className="w-full bg-[#3b281f] hover:bg-[#2a1c15] transition-all duration-300 text-white py-4 rounded-xl font-semibold">
+          <button className="w-full bg-[#0d1b4c] hover:bg-[#09122f] transition-all duration-300 text-white py-4 rounded-xl font-semibold">
             Send Message
           </button>
 

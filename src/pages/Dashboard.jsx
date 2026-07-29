@@ -1,12 +1,11 @@
-import { useState } from 'react'
-import { Menu, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Menu, Moon, Sun, X } from 'lucide-react'
 
 import Sidebar from '../components/dashboard/Sidebar'
 import Topbar from '../components/dashboard/Topbar'
 
 import StatsCards from '../components/dashboard/StatsCards'
 import CumulativeSales from '../components/dashboard/CumulativeSales'
-import PropertyGrid from '../components/dashboard/PropertyGrid'
 
 import BRS from './BRS'
 import BRSDetails from './BRSDetails'
@@ -16,12 +15,30 @@ import Agents from './Agents'
 import DeveloperVoucher from './DeveloperVoucher'
 import Developers from './Developers'
 import Reports from './Reports'
+import MyProfile from './MyProfile'
+import PropertyManagement from './PropertyManagement'
+import AgentProperties from './AgentProperties'
+import Teams from './Teams'
+import MyAyuda from './MyAyuda'
+import AdminSettings from './AdminSettings'
 function Dashboard() {
+  const [theme, setTheme] = useState(() => localStorage.getItem('dashboardTheme') || 'light')
+  const role = localStorage.getItem('role') || 'Agent'
+  const now = new Date()
+  const savedMonth = localStorage.getItem('dashboardCommissionMonth') || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const savedWeek = localStorage.getItem('dashboardSalesWeek') || getIsoWeek(now)
+  const [dashboardFilters, setDashboardFilters] = useState(() => ({
+    period: ['week', 'month'].includes(localStorage.getItem('dashboardCommissionPeriod')) ? localStorage.getItem('dashboardCommissionPeriod') : 'month',
+    year: localStorage.getItem('dashboardCommissionYear') || savedMonth.split('-')[0],
+    month: savedMonth.split('-')[1],
+    week: savedWeek,
+  }))
 
   const [activePage, setActivePage] =
     useState(() => {
       const storedPage = localStorage.getItem('activeDashboardPage')
       localStorage.removeItem('activeDashboardPage')
+      if (localStorage.getItem('mustChangePassword') === 'true') return 'profile'
       return storedPage || 'dashboard'
     })
 
@@ -31,9 +48,26 @@ function Dashboard() {
   const [mobileMenu, setMobileMenu] =
     useState(false)
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+    localStorage.setItem('dashboardTheme', theme)
+  }, [theme])
+
   const renderPage = () => {
 
   switch (activePage) {
+    case 'settings':
+      if (role !== 'Administrator') {
+        return <><Topbar /><StatsCards filters={dashboardFilters} onFiltersChange={setDashboardFilters} /></>
+      }
+      return <div className="mt-8"><AdminSettings /></div>
+
+    case 'profile':
+      return (
+        <div className="mt-8">
+          <MyProfile />
+        </div>
+      )
 
     case 'dashboard':
       return (
@@ -41,18 +75,24 @@ function Dashboard() {
           <Topbar />
 
           <div>
-            <StatsCards />
+            <StatsCards filters={dashboardFilters} onFiltersChange={setDashboardFilters} />
           </div>
 
-          <CumulativeSales />
+          <CumulativeSales filters={dashboardFilters} />
 
-          <div className="mt-8">
-            <PropertyGrid />
-          </div>
         </>
       )
 
     case 'agents':
+      if (!['Administrator', 'EVP'].includes(role)) {
+        return (
+          <>
+            <Topbar />
+            <StatsCards filters={dashboardFilters} onFiltersChange={setDashboardFilters} />
+            <CumulativeSales filters={dashboardFilters} />
+          </>
+        )
+      }
       return (
         <>
 
@@ -123,15 +163,23 @@ function Dashboard() {
 
     case 'teams':
       return (
-        <>
-
-          <div className="mt-8 bg-white rounded-[30px] p-10">
-            Teams Page
-          </div>
-        </>
+        <div className="mt-8"><Teams /></div>
       )
 
+    case 'my-ayuda':
+      if (role === 'Administrator') return <div className="mt-8"><Teams /></div>
+      return <div className="mt-8"><MyAyuda /></div>
+
     case 'reports':
+      if (role !== 'Administrator') {
+        return (
+          <>
+            <Topbar />
+            <StatsCards filters={dashboardFilters} onFiltersChange={setDashboardFilters} />
+            <CumulativeSales filters={dashboardFilters} />
+          </>
+        )
+      }
   return (
     <div className="mt-8">
       <Reports />
@@ -145,17 +193,24 @@ function Dashboard() {
     </div>
   )
 
+    case 'properties':
+  return (
+    <PropertyManagement />
+  )
+
+    case 'agent-properties':
+  return (
+    <AgentProperties />
+  )
+
     default:
       return (
         <>
 
           <div className="mt-8">
-            <StatsCards />
+            <StatsCards filters={dashboardFilters} onFiltersChange={setDashboardFilters} />
           </div>
 
-          <div className="mt-8">
-            <PropertyGrid />
-          </div>
         </>
       )
 
@@ -165,9 +220,8 @@ function Dashboard() {
 
   return (
     <section
-      className="
+      className="dashboard-theme
         flex
-        bg-[#f3f6fa]
         min-h-screen
       "
     >
@@ -243,9 +297,11 @@ function Dashboard() {
       <div
         className="
           flex-1
-          p-4
-          md:p-6
-          lg:p-8
+          p-3
+          sm:p-4
+          md:p-5
+          lg:p-6
+          xl:p-7
           overflow-auto
         "
       >
@@ -273,8 +329,27 @@ function Dashboard() {
 
       </div>
 
+      <button
+        type="button"
+        aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}
+        className="theme-toggle fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-2xl border shadow-lg"
+      >
+        {theme === 'dark' ? <Sun size={21} /> : <Moon size={21} />}
+      </button>
+
     </section>
   )
 }
 
 export default Dashboard
+
+function getIsoWeek(value) {
+  const date = new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()))
+  const day = date.getUTCDay() || 7
+  date.setUTCDate(date.getUTCDate() + 4 - day)
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
+  const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7)
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`
+}

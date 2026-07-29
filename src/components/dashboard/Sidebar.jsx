@@ -7,9 +7,13 @@ import {
   Home,
   UserRound,
   LogOut,
+  HandCoins,
+  Settings,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 import { useNavigate } from 'react-router-dom'
+import { authApi } from '../../lib/api'
 
 function Sidebar({
   activePage,
@@ -21,13 +25,51 @@ function Sidebar({
   const role =
     localStorage.getItem('role') ||
     'Agent'
+  const [mustChangePassword, setMustChangePassword] = useState(
+    () => localStorage.getItem('mustChangePassword') === 'true'
+  )
 
-  const handleLogout = () => {
+  useEffect(() => {
+    const syncPasswordRequirement = (event) => {
+      setMustChangePassword(
+        event.detail?.mustChangePassword ??
+        localStorage.getItem('mustChangePassword') === 'true'
+      )
+    }
+    window.addEventListener('zonal:password-requirement-changed', syncPasswordRequirement)
+    window.addEventListener('storage', syncPasswordRequirement)
+    return () => {
+      window.removeEventListener('zonal:password-requirement-changed', syncPasswordRequirement)
+      window.removeEventListener('storage', syncPasswordRequirement)
+    }
+  }, [])
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout()
+    } catch (error) {
+      console.error(error)
+    }
+
     localStorage.clear()
     sessionStorage.clear()
 
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'auto',
+    })
+
     navigate('/', {
       replace: true,
+    })
+
+    window.requestAnimationFrame(() => {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: 'auto',
+      })
     })
   }
 
@@ -65,17 +107,47 @@ function Sidebar({
         icon: Home,
       },
       {
+        key: 'properties',
+        label: 'Add Property',
+        icon: Home,
+      },
+      {
         key: 'agents',
         label: 'Agents',
         icon: UserRound,
+      },
+      {
+        key: 'settings',
+        label: 'Settings',
+        icon: Settings,
       },
     ],
 
     Agent: [
       {
+        key: 'dashboard',
+        label: 'Dashboard',
+        icon: LayoutDashboard,
+      },
+      {
+        key: 'agent-properties',
+        label: 'Properties',
+        icon: Home,
+      },
+      {
+        key: 'profile',
+        label: 'My Profile',
+        icon: UserRound,
+      },
+      {
         key: 'brs',
         label: 'BRS',
         icon: ClipboardList,
+      },
+      {
+        key: 'commission',
+        label: 'Commission',
+        icon: WalletCards,
       },
       {
         key: 'reports',
@@ -85,6 +157,16 @@ function Sidebar({
     ],
 
     HLC: [
+      {
+        key: 'dashboard',
+        label: 'Dashboard',
+        icon: LayoutDashboard,
+      },
+      {
+        key: 'profile',
+        label: 'My Profile',
+        icon: UserRound,
+      },
       {
         key: 'brs',
         label: 'BRS',
@@ -104,6 +186,11 @@ function Sidebar({
 
     'Sales Director': [
       {
+        key: 'profile',
+        label: 'My Profile',
+        icon: UserRound,
+      },
+      {
         key: 'dashboard',
         label: 'Dashboard',
         icon: LayoutDashboard,
@@ -119,24 +206,6 @@ function Sidebar({
         icon: ClipboardList,
       },
       {
-        key: 'reports',
-        label: 'Reports',
-        icon: BarChart3,
-      },
-      {
-        key: 'agents',
-        label: 'Agents',
-        icon: UserRound,
-      },
-    ],
-
-    EVP: [
-      {
-        key: 'dashboard',
-        label: 'Dashboard',
-        icon: LayoutDashboard,
-      },
-      {
         key: 'commission',
         label: 'Commission',
         icon: WalletCards,
@@ -148,21 +217,66 @@ function Sidebar({
       },
     ],
 
+    EVP: [
+      {
+        key: 'profile',
+        label: 'My Profile',
+        icon: UserRound,
+      },
+      {
+        key: 'dashboard',
+        label: 'Dashboard',
+        icon: LayoutDashboard,
+      },
+      {
+        key: 'teams',
+        label: 'Teams',
+        icon: Users,
+      },
+      {
+        key: 'agents',
+        label: 'Add Agent',
+        icon: UserRound,
+      },
+      {
+        key: 'commission',
+        label: 'Commission',
+        icon: WalletCards,
+      },
+      {
+        key: 'reports',
+        label: 'Reports',
+        icon: BarChart3,
+      },
+      {
+        key: 'properties',
+        label: 'Add Property',
+        icon: Home,
+      },
+    ],
+
   }
 
+  const roleMenus = role === 'Administrator' ? (menus[role] || menus.Agent) : [...(menus[role] || menus.Agent), { key: 'my-ayuda', label: 'My Ayuda', icon: HandCoins }]
   const currentMenus =
-    menus[role] || menus.Agent
+    [...(mustChangePassword
+      ? roleMenus.filter((item) => item.key === 'profile')
+      : roleMenus.filter((item) => role === 'Administrator' || item.key !== 'reports'))].sort((first, second) => {
+      if (first.key === 'dashboard') return -1
+      if (second.key === 'dashboard') return 1
+      return first.label.localeCompare(second.label)
+    })
 
   return (
     <aside
-      className="
-        w-[280px]
+      className="dashboard-sidebar
+        w-[248px]
         h-full
-        bg-[#fbfcfe]
+        bg-[#fffefd]
         border-r
         border-[#e5ebf3]
-        px-6
-        py-8
+        px-4
+        py-6
         flex
         flex-col
         justify-between
@@ -171,33 +285,12 @@ function Sidebar({
 
       <div>
 
-        <div className="mb-10">
-
-          <h1 className="text-3xl font-black tracking-tight text-[#172033] mt-4">
-            ZONAL
-          </h1>
-
-          <p className="text-[#7b8797] text-sm">
-            Realty Management
-          </p>
-
-          <div
-            className="
-              mt-4
-              inline-flex
-              items-center
-              px-3
-              py-1
-              rounded-full
-              bg-[#f3eadc]
-              text-[#8a5d20]
-              text-xs
-              font-semibold
-            "
-          >
-            {role}
-          </div>
-
+        <div className="mb-7 flex h-14 items-center justify-center">
+          <img
+            src="/zonal-realty-logo.png"
+            alt="Zonal Realty"
+            className="h-12 w-auto max-w-[170px] object-contain object-center"
+          />
         </div>
 
         <div className="space-y-2">
@@ -210,16 +303,14 @@ function Sidebar({
 
               <button
                 key={item.key}
-                onClick={() =>
-                  setActivePage(item.key)
-                }
-                className={`
+                onClick={() => item.path ? navigate(item.path) : setActivePage(item.key)}
+                className={`dashboard-nav-item
                   w-full
                   flex
                   items-center
-                  gap-4
+                  gap-3
                   px-4
-                  py-4
+                  py-3
                   rounded-xl
                   transition-all
                   font-semibold
@@ -227,16 +318,15 @@ function Sidebar({
                   ${
                     activePage === item.key
                       ? `
-                        bg-white
-                        text-[#172033]
-                        shadow-[0_10px_25px_rgba(15,23,42,0.07)]
-                        ring-1
-                        ring-[#e7ecf3]
+                        bg-[#071a3d]
+                        text-white
+                        shadow-[0_10px_24px_rgba(7,26,61,0.18)]
+                        ring-1 ring-[#c9a96e]/40
                       `
                       : `
                         text-[#526071]
                         hover:bg-white
-                        hover:text-[#172033]
+                        hover:text-[#111827]
                       `
                   }
                 `}
@@ -262,7 +352,7 @@ function Sidebar({
 
         <button
           onClick={handleLogout}
-          className="
+            className="dashboard-logout
             w-full
             flex
             items-center

@@ -1,16 +1,28 @@
 import { useEffect, useState } from "react";
 
-import { developerApi } from "../lib/api";
+import { agentApi, developerApi } from "../lib/api";
+import { useFeedback } from "../components/ui/feedbackContext";
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import { EmptyState, Pagination, TableSkeleton } from "../components/ui/DataStates";
+import { useSavedFilters } from "../hooks/useSavedFilters";
+import PremiumPageHeader from "../components/dashboard/PremiumPageHeader";
 
 function Developers() {
+  const { confirm } = useFeedback();
+  const { filters, updateFilter, resetFilters } = useSavedFilters("developers", { search: "", status: "All", pageSize: 10 });
   const [developers, setDevelopers] =
     useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [salesDirectors, setSalesDirectors] = useState([]);
 
   const [showForm, setShowForm] =
     useState(false);
 
   const [editingId, setEditingId] =
     useState(null);
+  const [isDirty, setIsDirty] = useState(false);
+  useUnsavedChanges(showForm && isDirty);
 
   const [formData, setFormData] =
     useState({
@@ -24,6 +36,22 @@ function Developers() {
       notes: "",
     });
 
+  const normalizedSearch = filters.search.trim().toLowerCase();
+  const filteredDevelopers = developers.filter((developer) =>
+    (filters.status === "All" || developer.status === filters.status) &&
+    [
+      developer.developerName,
+      developer.project,
+      developer.lts,
+      developer.developerRate,
+      developer.assignedLsd,
+      developer.projectLocation,
+      developer.status,
+    ].some((value) =>
+      String(value || "").toLowerCase().includes(normalizedSearch)
+    )
+  );
+
   useEffect(() => {
     const loadDevelopers = async () => {
       try {
@@ -31,10 +59,34 @@ function Developers() {
       } catch (error) {
         console.error(error);
         alert(error.message);
+      } finally {
+        setLoading(false);
       }
     };
 
     loadDevelopers();
+  }, []);
+  const pageCount = Math.max(1, Math.ceil(filteredDevelopers.length / filters.pageSize));
+  const safePage = Math.min(page, pageCount);
+  const visibleDevelopers = filteredDevelopers.slice((safePage - 1) * filters.pageSize, safePage * filters.pageSize);
+
+  useEffect(() => {
+    const loadSalesDirectors = async () => {
+      try {
+        const agents = await agentApi.list();
+        setSalesDirectors(
+          agents.filter(
+            (agent) =>
+              agent.role === "Sales Director" && agent.status === "Active"
+          )
+        );
+      } catch (error) {
+        console.error(error);
+        alert(error.message);
+      }
+    };
+
+    loadSalesDirectors();
   }, []);
 
   const resetForm = () => {
@@ -50,6 +102,7 @@ function Developers() {
     });
 
     setEditingId(null);
+    setIsDirty(false);
   };
 
   const openAddForm = () => {
@@ -78,10 +131,12 @@ function Developers() {
     });
 
     setEditingId(developer.id);
+    setIsDirty(false);
     setShowForm(true);
   };
 
   const handleChange = (e) => {
+    setIsDirty(true);
     setFormData({
       ...formData,
       [e.target.name]:
@@ -106,10 +161,7 @@ function Developers() {
           editingId,
           {
             ...formData,
-            developerRate:
-              Number(
-                formData.developerRate
-              ) || 0,
+            developerRate: parseDeveloperRate(formData.developerRate),
           }
         );
 
@@ -120,10 +172,7 @@ function Developers() {
         await developerApi.create({
             ...formData,
 
-            developerRate:
-              Number(
-                formData.developerRate
-              ) || 0,
+            developerRate: parseDeveloperRate(formData.developerRate),
         });
 
         alert(
@@ -144,10 +193,11 @@ function Developers() {
   const handleDelete = async (
     id
   ) => {
-    const confirmed =
-      window.confirm(
-        "Delete this developer?"
-      );
+    const confirmed = await confirm({
+      title: "Delete developer project?",
+      message: "This removes the project from the developer directory. This action cannot be undone.",
+      confirmLabel: "Delete project",
+    });
 
     if (!confirmed) return;
 
@@ -168,37 +218,30 @@ function Developers() {
   return (
     <div className="bg-white rounded-[30px] p-8 shadow-sm">
 
-      <div className="flex items-center justify-between mb-8">
-
-        <div>
-          <h2 className="text-3xl font-black text-[#3b281f]">
-            Developers
-          </h2>
-
-          <p className="text-gray-500">
-            Manage developer projects
-          </p>
-        </div>
-
-        <button
+      <div className="mb-6"><PremiumPageHeader eyebrow="Project Directory" title="Developers" description="Manage developer projects" actions={<button
           onClick={openAddForm}
-          className="
-            px-5
-            py-3
-            rounded-xl
-            bg-[#4f5dff]
-            text-white
-            font-semibold
-          "
         >
           Add Developer
-        </button>
+        </button>} /></div>
 
+      <div className="mb-6 grid gap-3 rounded-2xl border border-slate-100 p-5 sm:grid-cols-[1fr_auto_auto]">
+        <input
+          type="search"
+          value={filters.search}
+          onChange={(event) => { updateFilter("search", event.target.value); setPage(1); }}
+          placeholder="Search developer, project, LTS, LSD, location or status..."
+          aria-label="Search developers"
+          className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-blue-100"
+        />
+        <select value={filters.status} onChange={(event) => { updateFilter("status", event.target.value); setPage(1); }} className="h-12 rounded-xl border border-gray-300 bg-white px-4 font-semibold"><option value="All">All Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+        {(filters.search || filters.status !== "All") && <button onClick={() => { resetFilters(); setPage(1); }} className="h-12 rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-600">Clear</button>}
+        <p className="text-xs text-slate-400 sm:col-span-3">Filters and rows-per-page are saved on this device.</p>
       </div>
 
-      <div className="overflow-auto">
+      <div className="overflow-hidden rounded-2xl border border-slate-100">
+      <div className="responsive-table-wrap">
 
-        <table className="w-full">
+        <table className="w-full min-w-[820px]">
 
           <thead>
             <tr className="border-b">
@@ -234,7 +277,9 @@ function Developers() {
 
           <tbody>
 
-            {developers.map(
+            {loading && <TableSkeleton columns={7} rows={5} />}
+
+            {!loading && visibleDevelopers.map(
               (developer) => (
                 <tr
                   key={
@@ -344,10 +389,13 @@ function Developers() {
               )
             )}
 
+            {!loading && filteredDevelopers.length === 0 && <tr><td colSpan="7"><EmptyState title={filters.search || filters.status !== "All" ? "No matching developer projects" : "No developer projects yet"} description={filters.search || filters.status !== "All" ? "Try another keyword or clear the filters." : "Add your first developer project to make it available in BRS records."} action={(filters.search || filters.status !== "All") ? <button onClick={resetFilters} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">Clear filters</button> : <button onClick={openAddForm} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">Add Developer</button>} /></td></tr>}
+
           </tbody>
 
         </table>
-
+      </div>
+      {!loading && <Pagination page={safePage} pageSize={filters.pageSize} total={filteredDevelopers.length} onPageChange={setPage} onPageSizeChange={(size) => { updateFilter("pageSize", size); setPage(1); }} />}
       </div>
 
       {showForm && (
@@ -421,16 +469,36 @@ function Developers() {
                 }
               />
 
-              <Input
-                label="Assigned LSD"
-                name="assignedLsd"
-                value={
-                  formData.assignedLsd
-                }
-                onChange={
-                  handleChange
-                }
-              />
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-600">
+                  Assigned LSD
+                </label>
+                <select
+                  name="assignedLsd"
+                  value={formData.assignedLsd}
+                  onChange={handleChange}
+                  className="w-full border rounded-xl p-3 bg-white"
+                >
+                  <option value="">None</option>
+                  {formData.assignedLsd &&
+                    !salesDirectors.some((agent) =>
+                      `${agent.firstName || ""} ${agent.lastName || ""}`.trim() ===
+                      formData.assignedLsd
+                    ) && (
+                      <option value={formData.assignedLsd}>
+                        {formData.assignedLsd} (Existing Assignment)
+                      </option>
+                    )}
+                  {salesDirectors.map((agent) => {
+                    const fullName = `${agent.firstName || ""} ${agent.lastName || ""}`.trim();
+                    return (
+                      <option key={agent.id} value={fullName}>
+                        {fullName}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
 
               <Input
                 label="Project Location"
@@ -506,10 +574,12 @@ function Developers() {
             <div className="flex justify-end gap-3 mt-8">
 
               <button
-                onClick={() =>
-                  setShowForm(false)
-                }
-                className="
+                onClick={async () => {
+                  if (isDirty && !await confirm({ title: "Discard unsaved changes?", message: "The information entered in this form will be lost.", confirmLabel: "Discard changes" })) return;
+                  setShowForm(false);
+                  resetForm();
+                }}
+                className="developer-form-cancel
                   px-5
                   py-3
                   rounded-xl
@@ -527,7 +597,7 @@ function Developers() {
                   px-5
                   py-3
                   rounded-xl
-                  bg-[#4f5dff]
+                  bg-[#2563eb]
                   text-white
                 "
               >
@@ -572,6 +642,10 @@ function Input({
       />
     </div>
   );
+}
+
+function parseDeveloperRate(value) {
+  return Number(String(value || "").replace(/[%\s,]/g, "")) || 0;
 }
 
 export default Developers;

@@ -5,6 +5,7 @@ import {
   FileSpreadsheet,
   FileText,
 } from "lucide-react";
+import PremiumPageHeader from "../components/dashboard/PremiumPageHeader";
 
 function Reports() {
   const [reportType, setReportType] =
@@ -19,8 +20,12 @@ function Reports() {
     "Per EVP",
     "Per Project",
     "Per Developer",
-    "Per HLC Locality",
-    "Sales Report",
+    "Per LeadBroker",
+    "Per HLCLocality",
+    "Per ProjectLocation",
+    "Download Transmittal",
+    "Download Collection",
+    "Download Users",
   ];
 
   return (
@@ -28,15 +33,7 @@ function Reports() {
 
       {/* HEADER */}
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-[#14224a]">
-          Reports
-        </h1>
-
-        <p className="text-gray-500 mt-1">
-          View sales, commission and performance reports.
-        </p>
-      </div>
+      <div className="mb-6"><PremiumPageHeader eyebrow="Business Intelligence" title="Reports" description="View sales, commission and performance reports." /></div>
 
       {/* FILTERS */}
 
@@ -109,7 +106,7 @@ function Reports() {
 
         <button
           className="
-            bg-[#4f5dff]
+            bg-[#2563eb]
             text-white
             px-5
             py-3

@@ -2,10 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowRight,
+  Eye,
+  EyeOff,
   Lock,
   Mail,
   ShieldCheck,
   Sparkles,
+  Zap,
   X
 } from 'lucide-react'
 
@@ -16,6 +19,7 @@ function LoginModal({ onClose }) {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -40,13 +44,16 @@ function LoginModal({ onClose }) {
 
       if (session.agentId) {
         localStorage.setItem('agentId', session.agentId)
-        localStorage.setItem('agentData', JSON.stringify(session.agentData))
+      }
+      localStorage.setItem('mustChangePassword', String(Boolean(session.mustChangePassword)))
+      localStorage.setItem('zonal:lastActivityAt', String(Date.now()))
+      if (session.mustChangePassword) {
+        localStorage.setItem('activeDashboardPage', 'profile')
       }
 
       onClose()
       navigate('/dashboard', { replace: true })
     } catch (error) {
-      console.log(error)
       setErrorMessage(error.message)
     } finally {
       setLoading(false)
@@ -63,7 +70,7 @@ function LoginModal({ onClose }) {
         items-center
         justify-center
         overflow-y-auto
-        bg-black/75
+        bg-[#020817]/85
         px-4
         py-8
         backdrop-blur-md
@@ -83,12 +90,13 @@ function LoginModal({ onClose }) {
           relative
           grid
           w-full
-          max-w-5xl
+          max-w-[920px]
           overflow-hidden
-          rounded-[34px]
-          bg-[#111111]
+          rounded-[28px]
+          bg-[#030b22]
           shadow-[0_30px_90px_rgba(0,0,0,0.55)]
-          lg:grid-cols-[0.95fr_1.05fr]
+          border border-white/10
+          lg:grid-cols-[0.92fr_1.08fr]
         "
       >
         <button
@@ -96,120 +104,136 @@ function LoginModal({ onClose }) {
           onClick={onClose}
           className="
             absolute
-            right-5
-            top-5
+            right-4
+            top-4
             z-20
             flex
-            h-11
-            w-11
+            h-10
+            w-10
             items-center
             justify-center
             rounded-full
-            bg-white/10
-            text-white
+            border border-[#d6b56d]/40
+            bg-[#071a3d]
+            text-[#e1bd70]
             backdrop-blur
             transition
-            hover:bg-white
-            hover:text-[#2d1f18]
+            hover:bg-[#d6b56d]
+            hover:text-[#071a3d]
           "
           aria-label="Close login"
         >
           <X size={20} />
         </button>
 
-        <div className="relative hidden min-h-[620px] overflow-hidden lg:block">
+        <div className="relative hidden min-h-[560px] overflow-hidden lg:block">
           <img
             src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=1200&auto=format&fit=crop"
             alt="Luxury real estate interior"
             className="absolute inset-0 h-full w-full object-cover"
           />
 
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-black/20" />
+          <div className="absolute inset-0 bg-[#020817]/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#020817] via-[#07152f]/58 to-[#07152f]/15" />
 
-          <div className="absolute bottom-0 left-0 right-0 p-10 text-white">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm backdrop-blur">
-              <Sparkles size={16} />
+          <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#d6b56d]/35 bg-[#071a3d]/50 px-4 py-2 text-xs font-semibold backdrop-blur">
+              <Sparkles size={15} className="text-[#e1bd70]" />
               Zonal command access
             </div>
 
-            <h2 className="text-5xl font-black leading-none">
-              Welcome back,
-              <span className="block text-[#d6a77a]">
-                Agent!
-              </span>
+            <h2 className="text-[42px] font-black leading-[0.98] tracking-tight">
+              Welcome back.
+              <span className="mt-1 block text-[#e1bd70]">Your workspace awaits.</span>
             </h2>
 
-            <p className="mt-5 max-w-sm text-white/75">
+            <p className="mt-4 max-w-sm text-sm leading-6 text-white/70">
               Jump straight into agents, BRS, approvals, commissions,
               and developer sales from one secure workspace.
             </p>
           </div>
         </div>
 
-        <div className="bg-[#fbf8f3] p-6 sm:p-8 lg:p-10">
-          <div className="mb-8">
+        <div className="bg-[#faf9f6] p-5 pt-16 sm:p-8 sm:pt-16 lg:p-9">
+          <div className="mb-6">
+            <img
+              src="/zonal-realty-logo.png"
+              alt="Zonal Realty"
+              className="mb-5 h-9 w-auto object-contain object-left lg:hidden"
+            />
             <div
               className="
-                mb-5
+                mb-4
                 flex
-                h-14
-                w-14
+                h-12
+                w-12
                 items-center
                 justify-center
                 rounded-2xl
-                bg-[#2d1f18]
-                text-[#d6a77a]
+                border border-[#d6b56d]/60
+                bg-[#071a3d]
+                text-[#e1bd70]
               "
             >
-              <ShieldCheck size={26} />
+              <ShieldCheck size={22} />
             </div>
 
-            <h1 className="text-4xl font-black text-[#2d1f18] sm:text-5xl">
+            <h1 className="text-3xl font-black tracking-tight text-[#071a3d] sm:text-[38px]">
               Login
             </h1>
 
-            <p className="mt-3 text-gray-500">
+            <p className="mt-2 text-sm text-slate-500">
               Access your Zonal Realty dashboard.
             </p>
           </div>
 
           <form
             onSubmit={handleLogin}
-            className="space-y-5"
+            className="space-y-4"
           >
             <div>
-              <label className="text-sm font-semibold text-[#6f5b4d]">
+              <label className="text-sm font-semibold text-[#475569]">
                 Email
               </label>
 
-              <div className="mt-2 flex items-center gap-3 rounded-2xl border border-[#eadccd] bg-white px-5 py-4 shadow-sm focus-within:border-[#c9a063]">
-                <Mail size={19} className="text-[#a56b3f]" />
+              <div className="mt-2 flex items-center gap-3 rounded-xl border border-[#dbe1e9] bg-white px-4 py-3.5 shadow-sm transition focus-within:border-[#9b762f] focus-within:ring-4 focus-within:ring-[#d6b56d]/10">
+                <Mail size={18} className="text-[#9b762f]" />
 
                 <input
                   type="email"
                   placeholder="name@zonalrealty.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-transparent text-[#2d1f18] outline-none placeholder:text-gray-400"
+                  className="w-full bg-transparent text-[#111827] outline-none placeholder:text-gray-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-sm font-semibold text-[#6f5b4d]">
+              <label className="text-sm font-semibold text-[#475569]">
                 Password
               </label>
 
-              <div className="mt-2 flex items-center gap-3 rounded-2xl border border-[#eadccd] bg-white px-5 py-4 shadow-sm focus-within:border-[#c9a063]">
-                <Lock size={19} className="text-[#a56b3f]" />
+              <div className="mt-2 flex items-center gap-3 rounded-xl border border-[#dbe1e9] bg-white px-4 py-3.5 shadow-sm transition focus-within:border-[#9b762f] focus-within:ring-4 focus-within:ring-[#d6b56d]/10">
+                <Lock size={18} className="text-[#9b762f]" />
 
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent text-[#2d1f18] outline-none placeholder:text-gray-400"
+                  className="w-full bg-transparent text-[#111827] outline-none placeholder:text-gray-400"
                 />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  className="text-[#111827] transition hover:text-[#111827]"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                </button>
               </div>
             </div>
 
@@ -228,17 +252,18 @@ function LoginModal({ onClose }) {
                 items-center
                 justify-center
                 gap-3
-                rounded-2xl
-                bg-[#2d1f18]
+                rounded-xl
+                border border-[#d6b56d]/40
+                bg-[#071a3d]
                 px-6
-                py-4
+                py-3.5
                 font-bold
                 text-white
                 shadow-xl
-                shadow-[#2d1f18]/20
+                shadow-[#0d1b4c]/20
                 transition
                 hover:-translate-y-0.5
-                hover:bg-[#3f2c22]
+                hover:bg-[#123f91]
                 disabled:translate-y-0
                 disabled:opacity-60
               "
@@ -248,13 +273,18 @@ function LoginModal({ onClose }) {
             </button>
           </form>
 
-          <div className="mt-8 grid grid-cols-3 gap-3 text-center">
-            {['Secure', 'Fast', 'Private'].map((item) => (
+          <div className="mt-6 grid grid-cols-3 gap-2 text-center">
+            {[
+              { label: 'Secure', icon: ShieldCheck },
+              { label: 'Fast', icon: Zap },
+              { label: 'Private', icon: Lock },
+            ].map(({ label, icon: TrustIcon }) => (
               <div
-                key={item}
-                className="rounded-2xl bg-white px-3 py-4 text-sm font-bold text-[#2d1f18] shadow-sm"
+                key={label}
+                className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e5dfd2] bg-white px-2 py-3 text-xs font-bold text-[#071a3d] shadow-sm"
               >
-                {item}
+                <TrustIcon className="h-4 w-4 text-[#9b762f]" />
+                {label}
               </div>
             ))}
           </div>

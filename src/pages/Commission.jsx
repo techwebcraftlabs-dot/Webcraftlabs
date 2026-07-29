@@ -2,34 +2,40 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { brsApi, voucherApi } from "../lib/api";
+import { useFeedback } from "../components/ui/feedbackContext";
+
+const BUYER_NOT_FOUND = "__buyer_not_found__";
+const LOCATION_NOT_APPLICABLE = "__location_not_applicable__";
 
 function Commission() {
+  const { confirm } = useFeedback();
   const navigate = useNavigate();
   const restoredVoucherBatch = readSelectedVoucherBatch();
+  const editingVoucher = readEditingVoucherBuyer();
   const [brsRecords, setBrsRecords] = useState([]);
   const [voucherRecords, setVoucherRecords] = useState([]);
   const [voucherLoading, setVoucherLoading] = useState(true);
-  const [selectedDeveloper, setSelectedDeveloper] = useState('');
-  const [selectedProject, setSelectedProject] = useState('');
-  const [selectedBuyerName, setSelectedBuyerName] = useState('');
-  const [selectedBRSId, setSelectedBRSId] = useState('');
+  const [selectedDeveloper, setSelectedDeveloper] = useState(editingVoucher?.developer || '');
+  const [selectedProject, setSelectedProject] = useState(editingVoucher?.project || '');
+  const [selectedBuyerName, setSelectedBuyerName] = useState(editingVoucher?.isPlaceholderBuyer ? BUYER_NOT_FOUND : editingVoucher?.buyer || '');
+  const [selectedBRSId, setSelectedBRSId] = useState(editingVoucher?.isPlaceholderBuyer ? LOCATION_NOT_APPLICABLE : editingVoucher?.brsDocId || '');
   const [voucherGrossAmount, setVoucherGrossAmount] = useState(
     restoredVoucherBatch?.voucherGrossAmount
       ? String(restoredVoucherBatch.voucherGrossAmount)
       : ''
   );
-  const [buyerAssignedAmount, setBuyerAssignedAmount] = useState('');
+  const [buyerAssignedAmount, setBuyerAssignedAmount] = useState(editingVoucher?.commissionAmount ? String(editingVoucher.commissionAmount) : '0');
   const [voucherDate, setVoucherDate] = useState(
     restoredVoucherBatch?.voucherDate &&
       restoredVoucherBatch.voucherDate !== "-"
       ? restoredVoucherBatch.voucherDate
       : ''
   );
-  const [remarks, setRemarks] = useState('');
+  const [remarks, setRemarks] = useState(editingVoucher?.remarks || '');
   const [voucherFile, setVoucherFile] = useState(null);
   const [voucherPreview, setVoucherPreview] = useState('');
   const [recordSearch, setRecordSearch] = useState('');
-  const [selectedVoucherId, setSelectedVoucherId] = useState('');
+  const [selectedVoucherId, setSelectedVoucherId] = useState(editingVoucher?.id || '');
   const [currentVoucherBatchId, setCurrentVoucherBatchId] =
     useState(() => restoredVoucherBatch?.voucherBatchId || createVoucherBatchId());
   const [currentVoucherIds, setCurrentVoucherIds] = useState(
@@ -78,9 +84,23 @@ function Commission() {
   const uniqueValues = (field, records = brsRecords) =>
     [...new Set(records.map((record) => record[field]).filter(Boolean))];
 
-  const selectedRecord = brsRecords.find(
-    (record) => record.id === selectedBRSId
-  );
+  const selectedRecord =
+    brsRecords.find((record) => record.id === selectedBRSId) ||
+    (selectedBuyerName === BUYER_NOT_FOUND &&
+    selectedBRSId === LOCATION_NOT_APPLICABLE
+      ? {
+          id: "",
+          brsId: "NOT FOUND",
+          buyer: "Not Found",
+          developer: selectedDeveloper,
+          project: selectedProject,
+          phase: "Not Applicable",
+          block: "Not Applicable",
+          lot: "Not Applicable",
+          isPlaceholderBuyer: true,
+          rateDistribution: [],
+        }
+      : null);
 
   const currentVoucherRecords = voucherRecords.filter((record) =>
     record.voucherBatchId === currentVoucherBatchId ||
@@ -109,9 +129,11 @@ function Commission() {
     getNumber(voucherGrossAmount) || getNumber(currentVoucherRecords[0]?.amount);
 
   const buyerAssignedTotal = currentVoucherRecords.reduce(
-    (total, record) => total + getNumber(record.commissionAmount),
+    (total, record) =>
+      total + Math.max(0, getNumber(record.commissionAmount)),
     0
   );
+  const assignedTotalExcludingEdit = buyerAssignedTotal - (editingVoucher?.id ? getNumber(currentVoucherRecords.find((record) => record.id === editingVoucher.id)?.commissionAmount) : 0);
 
   const voucherBalance = voucherGrossTotal - buyerAssignedTotal;
   const isVoucherTallied =
@@ -119,23 +141,6 @@ function Commission() {
 
   const getRecordAmount = (record) =>
     getNumber(record?.amount) || getNumber(record?.tcp) || getNumber(record?.nsp);
-
-  const getDeveloperRate = (record) =>
-    Number(
-      record?.rateDistribution?.find(
-        (row) => row.role?.toLowerCase() === "developer"
-      )?.rate
-    ) || 0;
-
-  const getCommissionAmount = (record) => {
-    const savedAmountDue = getNumber(record?.amountDue);
-
-    if (savedAmountDue) {
-      return savedAmountDue;
-    }
-
-    return getRecordAmount(record) * (getDeveloperRate(record) / 100);
-  };
 
   const handleDeveloperChange = (value) => {
     setSelectedDeveloper(value);
@@ -153,16 +158,12 @@ function Commission() {
   const handleBuyerChange = (value) => {
     setSelectedBuyerName(value);
     setSelectedBRSId('');
-    setBuyerAssignedAmount('');
+    setBuyerAssignedAmount('0');
   };
 
   const handleBRSChange = (value) => {
-    const record = brsRecords.find((item) => item.id === value);
-
     setSelectedBRSId(value);
-    setBuyerAssignedAmount(
-      record ? String(getCommissionAmount(record) || "") : ""
-    );
+    setBuyerAssignedAmount('0');
   };
 
   const clearForm = () => {
@@ -171,7 +172,7 @@ function Commission() {
     setSelectedBuyerName('');
     setSelectedBRSId('');
     setVoucherGrossAmount('');
-    setBuyerAssignedAmount('');
+    setBuyerAssignedAmount('0');
     setVoucherDate('');
     setRemarks('');
     setVoucherFile(null);
@@ -183,13 +184,14 @@ function Commission() {
     setSelectedProject('');
     setSelectedBuyerName('');
     setSelectedBRSId('');
-    setBuyerAssignedAmount('');
+    setBuyerAssignedAmount('0');
   };
 
   const resetVoucherSession = () => {
     clearForm();
     localStorage.removeItem("selectedVoucherBatch");
     localStorage.removeItem("selectedBuyer");
+    localStorage.removeItem("editingVoucherBuyer");
     setRecordSearch('');
     setSelectedVoucherId('');
     setCurrentVoucherIds([]);
@@ -232,7 +234,7 @@ function Commission() {
 
     const grossAmount = getNumber(voucherGrossAmount);
     const assignedAmount = getNumber(buyerAssignedAmount);
-    const nextAssignedTotal = buyerAssignedTotal + assignedAmount;
+    const nextAssignedTotal = assignedTotalExcludingEdit + Math.max(0, assignedAmount);
 
     if (!grossAmount) {
       alert("Please enter the voucher gross commission.");
@@ -252,10 +254,10 @@ function Commission() {
     try {
       setSavingVoucher(true);
 
-      const voucherDoc = await voucherApi.create({
+      const voucherPayload = {
         voucherBatchId: currentVoucherBatchId,
         voucherNo: currentVoucherBatchId,
-        brsDocId: selectedRecord.id,
+        brsDocId: selectedRecord.id || "",
         brsId: selectedRecord.brsId || "",
         buyer: selectedRecord.buyer || "",
         developer: selectedRecord.developer || "",
@@ -272,12 +274,18 @@ function Commission() {
         voucherPreview,
         status: "For Release",
         computationStatus: "Pending",
-      });
+        isPlaceholderBuyer: Boolean(selectedRecord.isPlaceholderBuyer),
+        rateDistribution: selectedRecord.rateDistribution || [],
+      };
+      const voucherDoc = editingVoucher?.id
+        ? (await voucherApi.patch(editingVoucher.id, voucherPayload), { id: editingVoucher.id })
+        : await voucherApi.create(voucherPayload);
 
       setSelectedVoucherId(voucherDoc.id);
       setCurrentVoucherIds((current) => [voucherDoc.id, ...current]);
       setVoucherRecords(await voucherApi.list());
-      alert("Voucher recorded successfully.");
+      localStorage.removeItem("editingVoucherBuyer");
+      alert(editingVoucher?.id ? "Voucher buyer updated successfully." : "Voucher recorded successfully.");
       clearBuyerSelection();
     } catch (error) {
       console.error(error);
@@ -288,9 +296,11 @@ function Commission() {
   };
 
   const handleDeleteVoucher = async (voucherId) => {
-    const shouldDelete = window.confirm(
-      "Delete this voucher release record?"
-    );
+    const shouldDelete = await confirm({
+      title: "Delete voucher release?",
+      message: "This release record will be permanently removed from the voucher history.",
+      confirmLabel: "Delete release",
+    });
 
     if (!shouldDelete) {
       return;
@@ -313,7 +323,20 @@ function Commission() {
   };
 
   const getBrsRecordForVoucher = (voucher) =>
-    brsRecords.find((record) => record.id === voucher?.brsDocId);
+    brsRecords.find((record) => record.id === voucher?.brsDocId) ||
+    (voucher?.isPlaceholderBuyer
+      ? {
+          brsId: voucher.brsId || "NOT FOUND",
+          buyer: voucher.buyer || "Not Found",
+          developer: voucher.developer || "",
+          project: voucher.project || "",
+          phase: voucher.phase || "Not Applicable",
+          block: voucher.block || "Not Applicable",
+          lot: voucher.lot || "Not Applicable",
+          rateDistribution: [],
+          isPlaceholderBuyer: true,
+        }
+      : null);
 
   const handleCompute = (record, voucher = null) => {
     if (!record) {
@@ -385,14 +408,14 @@ function Commission() {
   };
 
   return (
-    <section className="p-8 bg-[#f5f5f5] min-h-screen">
+    <section className="commission-create-page p-8 bg-[#f5f5f5] min-h-screen">
 
       {/* PAGE HEADER */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
 
         <div>
 
-          <h1 className="text-4xl font-black text-[#0d1b4c]">
+          <h1 className="text-4xl font-black text-[#111827]">
             Add Voucher
           </h1>
 
@@ -405,7 +428,7 @@ function Commission() {
       </div>
 
       {/* MAIN CARD */}
-      <div className="bg-white rounded-[30px] shadow-xl p-8">
+      <div className="commission-create-card bg-white rounded-[30px] shadow-xl p-8">
 
         <div className="grid xl:grid-cols-2 gap-10">
 
@@ -509,10 +532,13 @@ function Commission() {
                   "
                 >
                   <option value="" disabled hidden>Select Buyer</option>
+                  <option value={BUYER_NOT_FOUND}>Not Found</option>
                   {uniqueValues(
                     "buyer",
                     brsRecords.filter(
-                      (record) => record.project === selectedProject
+                      (record) =>
+                        record.developer === selectedDeveloper &&
+                        record.project === selectedProject
                     )
                   ).map((buyer) => (
                     <option key={buyer} value={buyer}>
@@ -547,8 +573,17 @@ function Commission() {
                   "
                 >
                   <option value="" disabled hidden>Select Phase / Block / Lot</option>
+                  {selectedBuyerName === BUYER_NOT_FOUND && (
+                    <option value={LOCATION_NOT_APPLICABLE}>
+                      Not Applicable
+                    </option>
+                  )}
                   {brsRecords
-                  .filter((record) => record.project === selectedProject)
+                  .filter(
+                    (record) =>
+                      record.developer === selectedDeveloper &&
+                      record.project === selectedProject
+                  )
                   .filter((record) => record.buyer === selectedBuyerName)
                   .map((record)=> (
                     <option key={record.id} value={record.id}>
@@ -661,12 +696,12 @@ function Commission() {
                   disabled:opacity-60
                 "
               >
-                {savingVoucher ? "ADDING..." : "ADD"}
+                {savingVoucher ? (editingVoucher?.id ? "UPDATING..." : "ADDING...") : (editingVoucher?.id ? "UPDATE BUYER" : "ADD")}
               </button>
 
               <button
                 onClick={clearForm}
-                className="
+                className="commission-soft-button
                   bg-gray-200
                   hover:bg-gray-300
                   text-black
@@ -688,7 +723,7 @@ function Commission() {
           <div>
 
             <div
-              className="
+              className="voucher-preview
                 border-2
                 border-dashed
                 border-gray-300
@@ -709,7 +744,7 @@ function Commission() {
               ) : (
                 <div className="h-full w-full flex items-center justify-center p-8 text-center">
                   <div>
-                    <p className="text-xl font-bold text-[#0d1b4c]">
+                    <p className="text-xl font-bold text-[#111827]">
                       {voucherFile?.name || "No voucher uploaded"}
                     </p>
                     <p className="text-gray-500 mt-2">
@@ -810,7 +845,7 @@ function Commission() {
 
           <div>
 
-            <h2 className="text-2xl font-bold text-[#0d1b4c]">
+            <h2 className="text-2xl font-bold text-[#111827]">
               Voucher Buyers
             </h2>
 
@@ -910,7 +945,7 @@ function Commission() {
                   `}
                 >
 
-                  <td className="p-5 font-semibold text-[#0d1b4c]">
+                  <td className="p-5 font-semibold text-[#111827]">
                     {voucher.brsId || "-"}
                   </td>
 
@@ -987,7 +1022,7 @@ function Commission() {
             </tbody>
 
             <tfoot>
-              <tr className="bg-[#f3f4f6] font-bold text-[#0d1b4c]">
+              <tr className="voucher-total-row bg-[#f3f4f6] font-bold text-[#111827]">
                 <td className="p-5" colSpan="4">Total Buyer Amount</td>
                 <td className="p-5 text-emerald-700">
                   P{buyerAssignedTotal.toLocaleString()}
@@ -1024,7 +1059,7 @@ function Commission() {
 
           <button
             onClick={resetVoucherSession}
-            className="
+            className="commission-soft-button
               bg-gray-200
               hover:bg-gray-300
               text-black
@@ -1048,9 +1083,9 @@ function Commission() {
 
 export default Commission
 
-function SummaryTile({ label, value, valueClass = "text-[#0d1b4c]" }) {
+function SummaryTile({ label, value, valueClass = "text-[#111827]" }) {
   return (
-    <div className="rounded-2xl bg-[#f5f6fa] p-4">
+    <div className="commission-summary-tile rounded-2xl bg-[#f5f6fa] p-4">
       <p className="text-sm font-semibold text-gray-500">{label}</p>
       <p className={`mt-1 text-xl font-black ${valueClass}`}>{value}</p>
     </div>
@@ -1078,6 +1113,14 @@ function createVoucherBatchId() {
 function readSelectedVoucherBatch() {
   try {
     return JSON.parse(localStorage.getItem("selectedVoucherBatch")) || null;
+  } catch {
+    return null;
+  }
+}
+
+function readEditingVoucherBuyer() {
+  try {
+    return JSON.parse(localStorage.getItem("editingVoucherBuyer")) || null;
   } catch {
     return null;
   }

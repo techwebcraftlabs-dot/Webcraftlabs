@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Check, Pencil, Save, X } from "lucide-react";
 
 import { brsApi, voucherApi } from "../lib/api";
 
+const protectedRateRoles = new Set([
+  "developer", "hlc", "sales director", "assistant hlc 1", "assistant hlc 2",
+  "jba", "zonal", "local sd", "recruiter", "coordinator", "ads/scholar",
+  "evp", "documentation hlc", "referral", "referral 2",
+]);
+
 function BRSDetails({ selectedBRSId, setActivePage }) {
+  const isAdministrator = localStorage.getItem("role") === "Administrator";
   const navigate = useNavigate();
   const { id } = useParams();
   const recordId = selectedBRSId || id;
@@ -16,6 +24,7 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
   const [statusDraft, setStatusDraft] = useState("For Approval");
   const [formData, setFormData] = useState({});
   const [rateDistribution, setRateDistribution] = useState([]);
+  const [attachments, setAttachments] = useState([]);
   const editingRef = useRef(false);
 
   useEffect(() => {
@@ -50,6 +59,20 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
     };
 
     loadRecord();
+  }, [recordId]);
+
+  useEffect(() => {
+    if (!recordId) {
+      return undefined;
+    }
+
+    brsApi
+      .listAttachments(recordId)
+      .then(setAttachments)
+      .catch((error) => {
+        console.error(error);
+        alert(error.message);
+      });
   }, [recordId]);
 
   useEffect(() => {
@@ -145,6 +168,10 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
   };
 
   const handleRemoveRateRow = (index) => {
+    if (isProtectedRateRow(rateDistribution[index])) {
+      alert("Standard rate-distribution rows cannot be removed.");
+      return;
+    }
     setRateDistribution((currentRows) =>
       currentRows.filter((_, rowIndex) => rowIndex !== index)
     );
@@ -179,6 +206,15 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
           })),
       });
 
+      const refreshedRecord = await brsApi.get(record.id);
+      setRecord(refreshedRecord);
+      setStatusDraft(refreshedRecord.status || "For Approval");
+      setFormData(createEditableRecord(refreshedRecord));
+      setRateDistribution(
+        Array.isArray(refreshedRecord.rateDistribution)
+          ? refreshedRecord.rateDistribution
+          : []
+      );
       setEditing(false);
       alert("BRS updated successfully.");
     } catch (error) {
@@ -238,23 +274,19 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
   const details = editing ? formData : record;
 
   return (
-    <section className="bg-[#f4f7fb] min-h-screen p-8">
-      <div className="flex items-center justify-between mb-8">
+    <section className="brs-details-page min-h-screen bg-[#f4f7fb] p-4 sm:p-6 lg:p-8">
+      <div className="brs-details-header sticky top-0 z-20 mb-6 rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_12px_35px_rgba(15,23,42,0.08)] backdrop-blur sm:p-6">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-black text-[#0d1b4c]">
-            BRS NO. {record.brsId || "-"}
-          </h1>
-          <p className="text-gray-500 mt-2">
-            Buyer Registration Details
-          </p>
+          <div className="mb-2 flex flex-wrap items-center gap-3"><span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black uppercase tracking-wider text-blue-700">Buyer Reservation</span><StatusBadge status={record.status || "For Approval"} /></div>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">BRS #{record.brsId || "-"}</h1>
+          <p className="mt-1 text-sm text-slate-500">Review buyer, property, rates, and commission activity.</p>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-4">
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">
-              Status
-            </label>
-            <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-end">
+          {isAdministrator && <div className="min-w-[260px]">
+            <label className="mb-1.5 block text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">Approval Status</label>
+            <div className="flex gap-2">
               <select
                 value={statusDraft}
                 onChange={(e) => setStatusDraft(e.target.value)}
@@ -263,11 +295,11 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
                   h-12
                   rounded-xl
                   border
-                  border-gray-200
-                  bg-white
+                  border-slate-200
+                  bg-slate-50
                   px-4
                   font-semibold
-                  text-[#0d1b4c]
+                  text-[#111827]
                   outline-none
                   focus:ring-2
                   focus:ring-[#2563eb]
@@ -277,41 +309,40 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
                 <option value="For Approval">For Approval</option>
                 <option value="Approved">Approved</option>
                 <option value="Hold">Hold</option>
+                <option value="Rejected">Rejected</option>
               </select>
               <button
                 type="button"
                 onClick={() => handleStatusChange(statusDraft)}
                 disabled={savingStatus || statusDraft === (record.status || "For Approval")}
-                className="h-12 rounded-xl bg-[#2563eb] px-5 font-semibold text-white shadow-lg hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-12 items-center gap-2 rounded-xl bg-blue-600 px-4 font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {savingStatus ? "Saving..." : "Save"}
+                <Check size={17} /> {savingStatus ? "Saving..." : "Apply"}
               </button>
             </div>
-          </div>
+          </div>}
 
-          <button
-            onClick={handleBack}
-            className="bg-gray-200 hover:bg-gray-300 px-6 py-3 rounded-xl font-semibold"
-          >
-            Back
-          </button>
-          <button
+          <div className="flex gap-2">
+          <button onClick={handleBack} className="flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 font-bold text-slate-700 hover:bg-slate-50"><ArrowLeft size={18} /> Back</button>
+          {isAdministrator && <button
             onClick={editing ? handleSaveEdit : handleEdit}
             disabled={saving}
-            className="bg-[#0d1b4c] hover:bg-[#09122f] text-white px-6 py-3 rounded-xl font-semibold shadow-lg disabled:opacity-60"
+            className="flex h-12 items-center gap-2 rounded-xl bg-[#0d1b4c] px-5 font-bold text-white shadow-md hover:bg-[#09122f] disabled:opacity-60"
           >
-            {editing ? (saving ? "Saving..." : "Save Changes") : "Edit"}
-          </button>
+            {editing ? <Save size={18} /> : <Pencil size={18} />}{editing ? (saving ? "Saving..." : "Save Changes") : "Edit"}
+          </button>}
           {editing && (
             <button
               onClick={handleCancelEdit}
               disabled={saving}
-              className="bg-white hover:bg-gray-50 px-6 py-3 rounded-xl font-semibold border border-gray-200 disabled:opacity-60"
+              className="flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
             >
-              Cancel
+              <X size={18} /> Cancel
             </button>
           )}
+          </div>
         </div>
+      </div>
       </div>
 
       <DetailsSection title="BUYER'S REGISTRATION SHEET">
@@ -366,6 +397,7 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
               row={row}
               onChange={(field, value) => handleRateChange(index, field, value)}
               onRemove={() => handleRemoveRateRow(index)}
+              canRemove={!isProtectedRateRow(row)}
             />
           ) : (
             <Input
@@ -386,7 +418,7 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
         )}
       </DetailsSection>
 
-      <div className="bg-white rounded-3xl shadow-lg p-8 mb-8">
+      <div className="brs-details-card mb-6 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-7">
         <label className="flex items-center gap-3 mb-3 font-medium text-gray-700">
           <input
             type="checkbox"
@@ -408,10 +440,30 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
             editing ? "bg-white focus:ring-2 focus:ring-[#2563eb]" : "bg-gray-50"
           }`}
         />
+        <div className="mt-5">
+          <Label>Attached Files</Label>
+          {attachments.length === 0 ? (
+            <p className="text-sm text-gray-400">No attached files.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {attachments.map((attachment) => (
+                <a
+                  key={attachment.id}
+                  href={brsApi.attachmentUrl(recordId, attachment.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg bg-blue-50 px-3 py-2 text-sm font-semibold text-[#111827] hover:underline"
+                >
+                  {attachment.fileName}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-lg p-8 mb-8">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-5">
+      <div className="brs-details-card mb-6 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-7">
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-5">
           <Input
             label="Amount Due"
             name="amountDue"
@@ -422,7 +474,7 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
           <Input label="Received" value={formatCurrency(summary.received)} />
           <Input
             label="Received %"
-            value={`${summary.receivedPercent.toFixed(0)}%`}
+            value={formatPercent(summary.receivedPercent)}
           />
           <Input
             label="Developer Deductions"
@@ -439,8 +491,9 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-lg overflow-hidden">
-        <table className="w-full">
+      <div className="brs-details-card overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-6 py-5"><h2 className="text-lg font-black text-slate-900">Commission Voucher History</h2><p className="mt-1 text-sm text-slate-500">All releases recorded for this reservation.</p></div>
+        <div className="responsive-table-wrap"><table className="w-full min-w-[700px]">
           <thead className="bg-[#f5f5f5]">
             <tr className="text-left text-gray-600">
               <th className="p-5">Date</th>
@@ -475,7 +528,7 @@ function BRSDetails({ selectedBRSId, setActivePage }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </section>
   );
@@ -559,7 +612,7 @@ function getPaymentSummary(record, vouchers) {
   const amountDue = getAmountDue(record);
   const received = vouchers.reduce(
     (total, voucher) =>
-      total + (getNumber(voucher.commissionAmount) || getNumber(voucher.amount)),
+      total + getNumber(voucher.commissionAmount),
     0
   );
   const developerDeductions = getNumber(record?.developerDeductions);
@@ -582,13 +635,24 @@ function formatCurrency(value) {
   });
 }
 
+function formatPercent(value) {
+  const percent = Number(value) || 0;
+
+  if (percent === 0) {
+    return "0%";
+  }
+
+  return `${percent.toFixed(2).replace(/\.00$/, "")}%`;
+}
+
 function DetailsSection({ title, children }) {
   return (
-    <div className="bg-white rounded-3xl shadow-lg overflow-hidden mb-8">
-      <div className="bg-[#2563eb] px-8 py-4">
-        <h2 className="text-white text-lg font-bold">{title}</h2>
+    <div className="brs-details-card mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
+      <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4 sm:px-7">
+        <span className="h-6 w-1.5 rounded-full bg-blue-600" />
+        <h2 className="text-sm font-black uppercase tracking-[0.08em] text-slate-800">{title}</h2>
       </div>
-      <div className="p-8 grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-7 xl:grid-cols-4">
         {children}
       </div>
     </div>
@@ -597,13 +661,13 @@ function DetailsSection({ title, children }) {
 
 function Label({ children }) {
   return (
-    <label className="block text-sm font-semibold text-gray-500 mb-2">
+    <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
       {children}
     </label>
   );
 }
 
-function RateDistributionInput({ row, onChange, onRemove }) {
+function RateDistributionInput({ row, onChange, onRemove, canRemove }) {
   return (
     <div>
       <Label>Rate Distribution</Label>
@@ -612,8 +676,9 @@ function RateDistributionInput({ row, onChange, onRemove }) {
           type="text"
           value={row.role || ""}
           onChange={(e) => onChange("role", e.target.value)}
+          readOnly={!canRemove}
           placeholder="Role"
-          className="h-12 min-w-0 rounded-xl border border-gray-300 px-3 outline-none focus:ring-2 focus:ring-[#2563eb]"
+          className={`h-12 min-w-0 rounded-xl border border-gray-300 px-3 outline-none focus:ring-2 focus:ring-[#2563eb] ${!canRemove ? "bg-slate-50 font-semibold text-slate-600" : ""}`}
         />
         <input
           type="text"
@@ -632,13 +697,15 @@ function RateDistributionInput({ row, onChange, onRemove }) {
           className="h-12 min-w-0 rounded-xl border border-gray-300 px-3 outline-none focus:ring-2 focus:ring-[#2563eb]"
         />
       </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="mt-2 text-sm font-semibold text-rose-600"
-      >
-        Remove
-      </button>
+      {canRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="mt-2 text-sm font-semibold text-rose-600"
+        >
+          Remove
+        </button>
+      )}
     </div>
   );
 }
@@ -659,12 +726,25 @@ function Input({
         name={name}
         readOnly={!editing}
         onChange={onChange}
-        className={`w-full border border-gray-300 rounded-xl px-4 py-3 outline-none ${
-          editing ? "bg-white focus:ring-2 focus:ring-[#2563eb]" : "bg-gray-50"
+        className={`h-12 w-full rounded-xl border px-4 text-sm font-semibold outline-none transition ${
+          editing ? "border-slate-300 bg-white text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-50" : "border-slate-100 bg-slate-50 text-slate-700"
         }`}
       />
     </div>
   );
+}
+
+function StatusBadge({ status }) {
+  const styles = {
+    Approved: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    Hold: "bg-rose-50 text-rose-700 ring-rose-200",
+    "For Approval": "bg-amber-50 text-amber-700 ring-amber-200",
+  };
+  return <span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${styles[status] || "bg-slate-50 text-slate-600 ring-slate-200"}`}>{status}</span>;
+}
+
+function isProtectedRateRow(row) {
+  return protectedRateRoles.has(String(row?.role || "").trim().toLowerCase());
 }
 
 export default BRSDetails;

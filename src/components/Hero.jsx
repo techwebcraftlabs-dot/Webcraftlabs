@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Bath,
@@ -19,51 +19,10 @@ import {
 
 import SearchBox from './SearchBox'
 import About3D from './About3D'
-
-const peso = "\u20b1"
-
-const availableAgents = [
-  {
-    id: 'sophia',
-    name: 'Sophia Miller',
-    role: 'Buyer Specialist',
-    phone: '+63 917 204 8831',
-    email: 'sophia@zonalrealty.com',
-    area: 'Makati, BGC',
-    response: 'Usually replies within 10 minutes',
-    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1200&auto=format&fit=crop',
-  },
-  {
-    id: 'michael',
-    name: 'Michael Lee',
-    role: 'Luxury Property Specialist',
-    phone: '+63 918 447 1902',
-    email: 'michael@zonalrealty.com',
-    area: 'Tagaytay, Cavite',
-    response: 'Available for site viewing today',
-    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1200&auto=format&fit=crop',
-  },
-  {
-    id: 'olivia',
-    name: 'Olivia Cruz',
-    role: 'Residential Consultant',
-    phone: '+63 916 832 4410',
-    email: 'olivia@zonalrealty.com',
-    area: 'Rizal, Antipolo',
-    response: 'Can send sample computation',
-    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=1200&auto=format&fit=crop',
-  },
-  {
-    id: 'mark',
-    name: 'Mark Santos',
-    role: 'Investment Advisor',
-    phone: '+63 919 561 7302',
-    email: 'mark@zonalrealty.com',
-    area: 'Nuvali, South Luzon',
-    response: 'Open for weekend tripping',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1200&auto=format&fit=crop',
-  },
-]
+import AgentSocialLinks, { FacebookIcon } from './AgentSocialLinks'
+import { propertyApi, publicStatsApi } from '../lib/api'
+import { formatPropertyPrice, propertyPriceIntersects } from '../lib/propertyPrice'
+import { groupPropertiesByProject } from '../lib/propertyProjects'
 
 const propertyListings = [
   {
@@ -189,12 +148,15 @@ const propertyListings = [
 ]
 
 const budgetRanges = {
-  'Under 7M': (price) => price < 7,
-  '7M - 15M': (price) => price >= 7 && price <= 15,
-  '15M+': (price) => price > 15,
+  'Under 7M': (property) => propertyPriceIntersects(property, 0, 6_999_999),
+  '7M - 15M': (property) => propertyPriceIntersects(property, 7_000_000, 15_000_000),
+  '15M+': (property) => propertyPriceIntersects(property, 15_000_001),
 }
 
 function Hero() {
+  const [savedProperties, setSavedProperties] = useState(
+    () => propertyListings.slice(0, 0)
+  )
   const [selectedProperty, setSelectedProperty] = useState(null)
   const [filters, setFilters] = useState({
     location: '',
@@ -202,18 +164,36 @@ function Hero() {
     budget: '',
   })
 
+  useEffect(() => {
+    propertyApi.list()
+      .then((records) => setSavedProperties(records.map((property) => ({
+        ...property,
+        image: property.image || propertyApi.imageUrl(property.id),
+        highlights: property.highlights || [],
+        agentIds: property.agentIds || [],
+        description: property.description || '',
+        lotArea: property.lotArea || '',
+      }))))
+      .catch((error) => {
+        console.error('Unable to load homepage properties.', error)
+        setSavedProperties([])
+      })
+  }, [])
+
   const filteredProperties = useMemo(() => {
-    return propertyListings.filter((property) => {
+    const matchingVariants = savedProperties.filter((property) => {
       const matchesLocation =
         !filters.location ||
         property.location.toLowerCase().includes(filters.location.toLowerCase())
       const matchesType = !filters.type || property.type === filters.type
       const matchesBudget =
-        !filters.budget || budgetRanges[filters.budget]?.(property.priceValue)
+        !filters.budget || budgetRanges[filters.budget]?.(property)
 
       return matchesLocation && matchesType && matchesBudget
     })
-  }, [filters])
+
+    return groupPropertiesByProject(matchingVariants)
+  }, [filters, savedProperties])
 
   const handleSearchProperties = () => {
     document.getElementById('properties')?.scrollIntoView({
@@ -227,28 +207,33 @@ function Hero() {
 
       {/* HERO */}
       <div className="relative bg-white pt-[66px]">
-        <div className="relative overflow-hidden pb-8 md:min-h-[680px] md:pb-0 lg:min-h-[clamp(650px,calc(100vh-80px),760px)]">
+        <div className="relative overflow-hidden pb-8 md:min-h-[680px] md:pb-0 lg:min-h-[calc(100svh-66px)]">
           <img
             src="/homepage-neighborhood.png"
             alt="Residential subdivision"
             className="absolute inset-0 h-full w-full object-cover"
           />
 
-          <div className="absolute inset-0 bg-black/35" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/10" />
+          <div className="absolute inset-0 bg-black/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/52 to-black/5" />
+          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/65 to-transparent" />
 
           <div className="relative z-20 mx-auto max-w-[1180px] px-5 pb-0 pt-9 sm:px-6 md:px-10 md:pt-12 xl:px-0">
             <div className="max-w-[660px]">
-              <div className="mb-5 inline-flex max-w-full items-center gap-3 rounded-full bg-black/45 px-4 py-2.5 text-xs font-semibold text-white shadow-2xl backdrop-blur-md sm:px-5 sm:py-3 sm:text-sm">
+              <div className="mb-5 inline-flex max-w-full items-center gap-3 rounded-full border border-white/15 bg-black/45 px-4 py-2.5 text-xs font-semibold text-white shadow-2xl backdrop-blur-md sm:px-5 sm:py-3 sm:text-sm">
                 <span className="h-3 w-3 rounded-full bg-emerald-400 shadow-[0_0_0_6px_rgba(52,211,153,0.12)]" />
                 Trusted by 100+ Real Estate Developers
               </div>
 
-              <h1 className="text-[clamp(2.8rem,9vw,4.5rem)] font-black leading-[0.96] text-white lg:text-[clamp(4rem,6vw,4.75rem)]">
-                Zonal Realty
+              <h1 className="leading-none">
+                <img
+                  src="/zonal-realty-logo.png"
+                  alt="Zonal Realty"
+                  className="h-24 w-auto max-w-full object-contain object-left brightness-0 invert sm:h-28 lg:h-32"
+                />
               </h1>
 
-              <p className="mt-7 max-w-[650px] text-base font-medium leading-7 text-white lg:text-lg lg:leading-8">
+              <p className="mt-5 max-w-[650px] text-base font-medium leading-7 text-white lg:text-lg lg:leading-8">
                 Find the right home, investment property, or project launch
                 through a curated marketplace backed by trusted developers and
                 licensed real estate professionals.
@@ -262,9 +247,9 @@ function Hero() {
                 ].map((item) => (
                   <div
                     key={item}
-                    className="flex min-h-[56px] items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur-sm lg:px-4"
+                    className="flex min-h-[54px] items-center gap-2 rounded-xl border border-[#d6b56d]/30 bg-black/35 px-3 py-3 backdrop-blur-md lg:px-4"
                   >
-                    <CheckCircle className="h-4 w-4 shrink-0 text-[#d6a54c]" />
+                    <CheckCircle className="h-4 w-4 shrink-0 text-[#d4af37]" />
                     <span>{item}</span>
                   </div>
                 ))}
@@ -273,7 +258,7 @@ function Hero() {
           </div>
 
           <div className="relative z-40 mt-8 px-5 md:px-8 xl:px-12">
-            <div className="mx-auto max-w-[1120px]">
+            <div className="mx-auto max-w-[1000px]">
               <SearchBox
                 filters={filters}
                 onFilterChange={setFilters}
@@ -291,41 +276,41 @@ function Hero() {
       {/* ABOUT */}
       <section
   id="about"
-  className="relative bg-[#faf8f5] py-20 overflow-hidden sm:py-24 lg:py-28 xl:py-32"
+  className="relative overflow-hidden bg-[#faf9f6] py-14 sm:py-16 lg:py-20"
 >
   {/* GLOW EFFECTS */}
-  <div className="absolute top-20 left-10 w-72 h-72 bg-[#d6a77a]/20 rounded-full blur-[120px]"></div>
+  <div className="absolute top-20 left-10 w-72 h-72 bg-[#bfdbfe]/20 rounded-full blur-[120px]"></div>
 
   <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-200/30 rounded-full blur-[140px]"></div>
 
   <div className="max-w-7xl mx-auto px-5 sm:px-6 md:px-8 xl:px-12">
 
-    <div className="grid gap-12 items-center lg:grid-cols-2 lg:gap-14 xl:gap-24">
+    <div className="grid gap-10 items-center lg:grid-cols-2 lg:gap-14 xl:gap-20">
 
       {/* LEFT */}
       <div>
 
-        <p className="uppercase tracking-[0.28em] text-[#8b5e3c] font-bold mb-5 text-sm">
+        <p className="mb-4 text-xs font-black uppercase tracking-[0.22em] text-[#9b762f]">
           About Zonal Realty
         </p>
 
-        <h2 className="text-[clamp(2.5rem,8vw,4.25rem)] font-black text-[#2d1f18] leading-[0.95]">
+        <h2 className="text-[clamp(2.4rem,6vw,3.8rem)] font-black leading-[0.96] tracking-tight text-[#071a3d]">
           Next Generation
           <br />
           Real Estate
         </h2>
 
-        <p className="mt-8 text-lg text-gray-600 leading-relaxed max-w-xl">
+        <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 lg:text-lg">
           Zonal Realty empowers developers,
           brokers and agents through a modern
           real estate ecosystem built for speed,
           transparency and growth.
         </p>
 
-        <div className="grid grid-cols-1 gap-6 mt-10 sm:grid-cols-3 lg:gap-8 lg:mt-12">
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
 
-          <div>
-            <h3 className="text-3xl lg:text-4xl font-black text-[#2d1f18]">
+          <div className="rounded-2xl border border-[#e7dfcf] bg-white p-4 shadow-[0_10px_28px_rgba(7,26,61,0.05)]">
+            <h3 className="text-2xl font-black text-[#071a3d] lg:text-3xl">
               2K+
             </h3>
 
@@ -334,8 +319,8 @@ function Hero() {
             </p>
           </div>
 
-          <div>
-            <h3 className="text-3xl lg:text-4xl font-black text-[#2d1f18]">
+          <div className="rounded-2xl border border-[#e7dfcf] bg-white p-4 shadow-[0_10px_28px_rgba(7,26,61,0.05)]">
+            <h3 className="text-2xl font-black text-[#071a3d] lg:text-3xl">
               300+
             </h3>
 
@@ -344,8 +329,8 @@ function Hero() {
             </p>
           </div>
 
-          <div>
-            <h3 className="text-3xl lg:text-4xl font-black text-[#2d1f18]">
+          <div className="rounded-2xl border border-[#e7dfcf] bg-white p-4 shadow-[0_10px_28px_rgba(7,26,61,0.05)]">
+            <h3 className="text-2xl font-black text-[#071a3d] lg:text-3xl">
               1.2K+
             </h3>
 
@@ -371,17 +356,17 @@ function Hero() {
       {/* DEVELOPERS */}
 <section
   id="developers"
-  className="relative bg-[#f8f5f0] py-20 overflow-hidden sm:py-24 lg:py-28 xl:py-32"
+  className="relative overflow-hidden border-y border-[#e8e3da] bg-white py-14 sm:py-16 lg:py-20"
 >
 
   {/* Background Glow */}
-  <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#d6a77a]/10 rounded-full blur-[150px]" />
-  <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#c9a063]/10 rounded-full blur-[150px]" />
+  <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#bfdbfe]/10 rounded-full blur-[150px]" />
+  <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#60a5fa]/10 rounded-full blur-[150px]" />
 
   <div className="max-w-7xl mx-auto px-5 sm:px-6 md:px-8 xl:px-12 relative z-10">
 
     {/* Heading */}
-    <div className="text-center mb-12 sm:mb-16 lg:mb-20">
+    <div className="text-center mb-10 sm:mb-12 lg:mb-14">
 
       <span
         className="
@@ -389,8 +374,9 @@ function Hero() {
           px-5
           py-2
           rounded-full
-          bg-[#d6a77a]/10
-          text-[#8b5e3c]
+          border border-[#d6b56d]/30
+          bg-[#faf7ef]
+          text-[#9b762f]
           uppercase
           tracking-[0.24em]
           text-xs
@@ -401,7 +387,7 @@ function Hero() {
         Our Professionals
       </span>
 
-      <h2 className="text-[clamp(2.5rem,8vw,4.25rem)] font-black text-[#2d1f18] leading-tight">
+      <h2 className="text-[clamp(2.3rem,6vw,3.65rem)] font-black leading-tight tracking-tight text-[#071a3d]">
         Meet The Experts
       </h2>
 
@@ -413,7 +399,7 @@ function Hero() {
 
     </div>
 
-    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 xl:gap-8">
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:gap-6">
 
   {[
     {
@@ -470,11 +456,12 @@ function Hero() {
       className="
       group
       relative
-      h-[360px]
-      rounded-[24px]
+      h-[320px]
+      rounded-[22px]
       overflow-hidden
-      shadow-[0_20px_50px_rgba(0,0,0,0.15)]
-      hover:-translate-y-3
+      border border-[#d6b56d]/20
+      shadow-[0_16px_38px_rgba(7,26,61,0.12)]
+      hover:-translate-y-2
       transition-all
       duration-500
       "
@@ -504,8 +491,8 @@ function Hero() {
           inline-block
           px-3 py-1
           rounded-full
-          bg-[#d6a77a]
-          text-black
+          bg-[#d6b56d]
+          text-[#071a3d]
           text-xs
           font-bold
           "
@@ -513,7 +500,7 @@ function Hero() {
           TEAM MEMBER
         </span>
 
-        <h3 className="text-white text-2xl font-black mt-4">
+        <h3 className="mt-3 text-xl font-black text-white">
           {dev.name}
         </h3>
 
@@ -531,17 +518,18 @@ function Hero() {
 
 </section>
 {/* TRUSTED DEVELOPERS */}
-<section className="relative py-20 bg-[#faf8f5] overflow-hidden sm:py-24 lg:py-28 xl:py-32">
+<section className="relative overflow-hidden bg-[#faf9f6] py-14 sm:py-16 lg:py-20">
 
   <div className="w-full px-5 sm:px-6 md:px-8 xl:px-12">
 
-    <div className="text-center mb-12 sm:mb-16">
+    <div className="text-center mb-10 sm:mb-12">
 
       <span className="
         px-5 py-2
         rounded-full
-        bg-[#d6a77a]/10
-        text-[#8b5e3c]
+        border border-[#d6b56d]/30
+        bg-white
+        text-[#9b762f]
         uppercase
         tracking-[0.24em]
         text-xs
@@ -550,7 +538,7 @@ function Hero() {
         Trusted Developers
       </span>
 
-      <h2 className="mt-6 text-[clamp(2.25rem,7vw,3.75rem)] font-black text-[#2d1f18] leading-tight">
+      <h2 className="mt-6 text-[clamp(2.25rem,6vw,3.5rem)] font-black leading-tight tracking-tight text-[#071a3d]">
         Partner Developers
       </h2>
 
@@ -560,7 +548,7 @@ function Hero() {
 
     </div>
 
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5 xl:gap-8">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
 
       {[
         {
@@ -609,16 +597,18 @@ function Hero() {
           key={index}
           className="
           bg-white
-          rounded-[24px]
-          p-6
-          min-h-[150px]
+          rounded-2xl
+          border border-[#e7dfcf]
+          p-4
+          min-h-[112px]
           flex
           flex-col
           items-center
           justify-center
-          shadow-lg
-          hover:-translate-y-2
-          hover:shadow-2xl
+          shadow-[0_10px_26px_rgba(7,26,61,0.06)]
+          hover:-translate-y-1
+          hover:border-[#d6b56d]
+          hover:shadow-[0_16px_34px_rgba(7,26,61,0.10)]
           transition-all
           duration-300
           "
@@ -627,15 +617,16 @@ function Hero() {
           <div
             className="
               flex
-              h-16
-              w-16
+              h-14
+              w-14
               items-center
               justify-center
               rounded-2xl
-              bg-[#2d1f18]
+              border border-[#d6b56d]/50
+              bg-[#071a3d]
               text-xl
               font-black
-              text-[#d6a77a]
+              text-white
               shadow-inner
             "
             aria-hidden="true"
@@ -643,7 +634,7 @@ function Hero() {
             {dev.mark}
           </div>
 
-          <p className="mt-5 font-semibold text-[#2d1f18] text-center">
+          <p className="mt-4 font-semibold text-[#111827] text-center">
             {dev.name}
           </p>
 
@@ -658,13 +649,13 @@ function Hero() {
 {/* FEATURED PROPERTIES */}
 <section
   id="properties"
-  className="py-20 bg-[#f6f1eb] sm:py-24 lg:py-28 xl:py-32"
+  className="border-t border-[#e8e3da] bg-[#f5f7fa] py-14 sm:py-16 lg:py-20"
 >
 
   <div className="max-w-7xl mx-auto px-5 sm:px-6 md:px-8 xl:px-12">
 
     {/* HEADING */}
-    <div className="text-center mb-12 sm:mb-16">
+    <div className="text-center mb-10 sm:mb-12">
 
       <span
         className="
@@ -672,8 +663,9 @@ function Hero() {
           px-5
           py-2
           rounded-full
-          bg-[#d6a77a]/10
-          text-[#8b5e3c]
+          border border-[#d6b56d]/30
+          bg-white
+          text-[#9b762f]
           uppercase
           tracking-[0.24em]
           text-xs
@@ -684,7 +676,7 @@ function Hero() {
         Featured Properties
       </span>
 
-      <h2 className="text-[clamp(2.5rem,8vw,4.25rem)] font-black text-[#2d1f18] leading-tight">
+      <h2 className="text-[clamp(2.3rem,6vw,3.65rem)] font-black leading-tight tracking-tight text-[#071a3d]">
         Popular Listings
       </h2>
 
@@ -697,19 +689,21 @@ function Hero() {
     </div>
 
     {/* PROPERTY GRID */}
-    <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6 xl:gap-8">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,280px))] justify-center gap-6 xl:gap-8">
 
-      {filteredProperties.map((property, index) => (
+      {filteredProperties.map((property) => (
 
         <div
-          key={index}
+          key={property.projectKey}
           className="
             bg-white
-            rounded-[24px]
+            rounded-[22px]
+            border border-[#e7dfcf]
             overflow-hidden
-            shadow-lg
-            hover:shadow-2xl
-            hover:-translate-y-3
+            shadow-[0_14px_34px_rgba(7,26,61,0.08)]
+            hover:border-[#d6b56d]
+            hover:shadow-[0_20px_44px_rgba(7,26,61,0.12)]
+            hover:-translate-y-2
             transition-all
             duration-500
           "
@@ -735,7 +729,7 @@ function Hero() {
                 px-4
                 py-2
                 rounded-full
-                bg-[#d6a77a]
+                bg-[#bfdbfe]
                 text-black
                 text-xs
                 font-bold
@@ -748,7 +742,7 @@ function Hero() {
 
           <div className="p-5 sm:p-6 flex flex-col min-h-[230px]">
 
-  <p className="text-[#a56b3f] text-sm font-medium uppercase tracking-wide">
+  <p className="text-[#111827] text-sm font-medium uppercase tracking-wide">
     {property.location}
   </p>
 
@@ -759,22 +753,29 @@ function Hero() {
       leading-tight
       font-serif
       font-semibold
-      text-[#2d1f18]
+      text-[#111827]
     "
   >
     {property.title}
   </h3>
 
+  <p className="mt-3 text-xs font-bold uppercase tracking-[0.14em] text-[#9b762f]">
+    {property.propertyTypes.length} {property.propertyTypes.length === 1 ? 'Property Type' : 'Property Types'} Available
+  </p>
+
   {/* Spacer */}
   <div className="flex-1"></div>
 
-  <div className="flex flex-col gap-4 pt-6 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
+  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 pt-6">
 
     <span
       className="
-        text-3xl
+        min-w-0
+        truncate
+        text-xl
+        sm:text-2xl
         font-black
-        text-[#d2a06b]
+        text-[#111827]
       "
     >
       {formatPrice(property)}
@@ -784,13 +785,14 @@ function Hero() {
       type="button"
       onClick={() => setSelectedProperty(property)}
       className="
-        bg-[#2d1f18]
+        bg-[#0d1b4c]
         text-white
-        px-5
-        py-3
+        shrink-0
+        px-4
+        py-2.5
         rounded-xl
         font-medium
-        hover:bg-[#3f2c22]
+        hover:bg-[#09122f]
         transition
       "
     >
@@ -807,12 +809,12 @@ function Hero() {
 
       {filteredProperties.length === 0 && (
         <div className="md:col-span-2 xl:col-span-4 rounded-[28px] bg-white p-10 text-center shadow-lg">
-          <h3 className="text-2xl font-black text-[#2d1f18]">
-            No matching properties found
+          <h3 className="text-2xl font-black text-[#111827]">
+            No property listings yet
           </h3>
 
           <p className="mt-3 text-gray-500">
-            Try another location, property type, or budget range.
+            Properties added by an Administrator or EVP will appear here.
           </p>
         </div>
       )}
@@ -827,7 +829,7 @@ function Hero() {
           items-center
           justify-center
           rounded-2xl
-          bg-[#2d1f18]
+          bg-[#0d1b4c]
           px-8
           py-4
           text-base
@@ -837,7 +839,7 @@ function Hero() {
           transition
           duration-300
           hover:-translate-y-1
-          hover:bg-[#3f2c22]
+          hover:bg-[#09122f]
         "
       >
         Explore More Properties
@@ -856,28 +858,31 @@ function Hero() {
 )}
 
 {/* FOOTER */}
-<footer id="contact" className="relative bg-[#111111] overflow-hidden">
+<footer id="contact" className="relative overflow-hidden border-t border-[#d6b56d]/50 bg-[linear-gradient(135deg,#020817_0%,#07152f_52%,#081c3c_100%)]">
 
   {/* Glow */}
-  <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#d6a77a]/10 rounded-full blur-[150px]" />
-  <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#d6a77a]/10 rounded-full blur-[150px]" />
+  <div className="absolute -left-40 -top-56 h-[480px] w-[480px] rounded-full bg-blue-600/10 blur-[140px]" />
+  <div className="absolute -bottom-64 -right-36 h-[500px] w-[500px] rounded-full bg-[#c9a96e]/10 blur-[150px]" />
+  <div aria-hidden="true" className="absolute right-[8%] top-10 hidden h-48 w-80 rotate-[-12deg] border border-[#d6b56d]/10 lg:block" />
 
-  <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-6 md:px-8 xl:px-12 py-16 lg:py-24">
+  <div className="relative z-10 mx-auto max-w-7xl px-5 py-12 sm:px-6 md:px-8 lg:py-14 xl:px-12">
 
     {/* TOP */}
-    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-16 pb-12 lg:pb-16 border-b border-white/10">
+    <div className="grid gap-10 border-b border-white/10 pb-10 sm:grid-cols-2 lg:grid-cols-[1.35fr_.8fr_.9fr_1.25fr] lg:gap-12 lg:pb-12">
 
       {/* BRAND */}
       <div>
 
-        <h2 className="text-4xl font-black text-white">
-          Zonal
-          <span className="text-[#d6a77a]">
-            Realty
-          </span>
+        <h2>
+          <img
+            src="/zonal-realty-logo.png"
+            alt="Zonal Realty"
+            className="h-16 w-auto max-w-full object-contain object-left brightness-0 invert"
+          />
         </h2>
 
-        <p className="mt-6 text-white/60 leading-relaxed">
+        <div className="mt-4 h-px w-12 bg-[#d6b56d]" />
+        <p className="mt-4 text-sm leading-6 text-white/60">
           A complete real estate ecosystem designed
           for developers, brokers, agents and
           property buyers across the Philippines.
@@ -888,32 +893,32 @@ function Hero() {
       {/* QUICK LINKS */}
       <div>
 
-        <h3 className="text-white font-bold text-lg mb-6">
+        <h3 className="mb-5 text-xs font-black uppercase tracking-[0.16em] text-[#e1bd70]">
           Quick Links
         </h3>
 
-        <ul className="space-y-4">
+        <ul className="space-y-3 text-sm">
 
           <li>
-            <a href="#home" className="text-white/60 hover:text-[#d6a77a] transition">
+            <a href="#home" className="group inline-flex items-center gap-2 text-white/60 transition hover:text-white"><span className="h-1 w-1 rounded-full bg-[#d6b56d] transition-all group-hover:w-3" />
               Home
             </a>
           </li>
 
           <li>
-            <a href="#about" className="text-white/60 hover:text-[#d6a77a] transition">
+            <a href="#about" className="group inline-flex items-center gap-2 text-white/60 transition hover:text-white"><span className="h-1 w-1 rounded-full bg-[#d6b56d] transition-all group-hover:w-3" />
               About
             </a>
           </li>
 
           <li>
-            <a href="#developers" className="text-white/60 hover:text-[#d6a77a] transition">
+            <a href="#developers" className="group inline-flex items-center gap-2 text-white/60 transition hover:text-white"><span className="h-1 w-1 rounded-full bg-[#d6b56d] transition-all group-hover:w-3" />
               Developers
             </a>
           </li>
 
           <li>
-            <a href="#properties" className="text-white/60 hover:text-[#d6a77a] transition">
+            <a href="#properties" className="group inline-flex items-center gap-2 text-white/60 transition hover:text-white"><span className="h-1 w-1 rounded-full bg-[#d6b56d] transition-all group-hover:w-3" />
               Properties
             </a>
           </li>
@@ -925,25 +930,25 @@ function Hero() {
       {/* SERVICES */}
       <div>
 
-        <h3 className="text-white font-bold text-lg mb-6">
+        <h3 className="mb-5 text-xs font-black uppercase tracking-[0.16em] text-[#e1bd70]">
           Services
         </h3>
 
-        <ul className="space-y-4">
+        <ul className="space-y-3 text-sm">
 
-          <li className="text-white/60">
+          <li className="border-l border-white/10 pl-3 text-white/60">
             Property Listings
           </li>
 
-          <li className="text-white/60">
+          <li className="border-l border-white/10 pl-3 text-white/60">
             Broker Management
           </li>
 
-          <li className="text-white/60">
+          <li className="border-l border-white/10 pl-3 text-white/60">
             Commission Tracking
           </li>
 
-          <li className="text-white/60">
+          <li className="border-l border-white/10 pl-3 text-white/60">
             Developer Portal
           </li>
 
@@ -954,22 +959,35 @@ function Hero() {
       {/* CONTACT */}
       <div>
 
-        <h3 className="text-white font-bold text-lg mb-6">
+        <h3 className="mb-5 text-xs font-black uppercase tracking-[0.16em] text-[#e1bd70]">
           Contact
         </h3>
 
-        <ul className="space-y-4">
+        <ul className="space-y-3 text-sm">
 
-          <li className="text-white/60">
-            Manila, Philippines
+          <li className="flex max-w-xs items-start gap-3 rounded-xl border border-white/10 bg-white/[0.035] p-3 text-white/60">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#e1bd70]" />
+            Block 2 Lot 26 Westwood Highlands, Langkaan 1, Dasmariñas, Philippines, 4114
           </li>
 
-          <li className="text-white/60">
-            contact@zonalrealty.com
+          <li className="flex items-center gap-3 text-white/60">
+            <Mail className="h-4 w-4 shrink-0 text-[#e1bd70]" />
+            <a
+              href="mailto:zonalrealtystaff2019@gmail.com"
+              className="transition hover:text-white"
+            >
+              zonalrealtystaff2019@gmail.com
+            </a>
           </li>
 
-          <li className="text-white/60">
-            +63 912 345 6789
+          <li className="flex items-center gap-3 text-white/60">
+            <Phone className="h-4 w-4 shrink-0 text-[#e1bd70]" />
+            <a
+              href="tel:+639399163098"
+              className="transition hover:text-white"
+            >
+              0939 916 3098
+            </a>
           </li>
 
         </ul>
@@ -979,60 +997,32 @@ function Hero() {
     </div>
 
     {/* BOTTOM */}
-    <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-8">
+    <div className="flex flex-col items-center justify-between gap-5 pt-6 sm:flex-row">
 
-      <p className="text-white/40 text-sm">
+      <p className="text-center text-xs text-white/40 sm:text-left">
        © {new Date().getFullYear()} Zonal Realty. All Rights Reserved.
       </p>
 
       <div className="flex gap-4">
 
         <a
-          href="#"
+          href="https://www.facebook.com/ZonalRealty"
+          target="_blank"
+          rel="noreferrer noopener"
+          aria-label="Visit Zonal Realty on Facebook"
+          title="Zonal Realty on Facebook"
           className="
-          w-12 h-12
+          w-10 h-10
           rounded-full
-          border border-white/10
+          border border-[#d6b56d]/30
           flex items-center justify-center
           text-white/60
-          hover:bg-[#d6a77a]
-          hover:text-black
+          hover:bg-[#d6b56d]
+          hover:text-[#071a3d]
           transition
           "
         >
-          FB
-        </a>
-
-        <a
-          href="#"
-          className="
-          w-12 h-12
-          rounded-full
-          border border-white/10
-          flex items-center justify-center
-          text-white/60
-          hover:bg-[#d6a77a]
-          hover:text-black
-          transition
-          "
-        >
-          IG
-        </a>
-
-        <a
-          href="#"
-          className="
-          w-12 h-12
-          rounded-full
-          border border-white/10
-          flex items-center justify-center
-          text-white/60
-          hover:bg-[#d6a77a]
-          hover:text-black
-          transition
-          "
-        >
-          IN
+          <FacebookIcon className="h-5 w-5" />
         </a>
 
       </div>
@@ -1047,61 +1037,70 @@ function Hero() {
 }
 
 function HomeStatsStrip() {
+  const [databaseStats, setDatabaseStats] = useState({
+    activeAgents: 0,
+    developers: 0,
+    properties: 0,
+    customerSatisfaction: 98,
+  })
+
+  useEffect(() => {
+    let active = true
+
+    publicStatsApi.get()
+      .then((stats) => {
+        if (active) setDatabaseStats(stats)
+      })
+      .catch((error) => console.error('Unable to load public homepage stats.', error))
+
+    return () => { active = false }
+  }, [])
+
   const stats = [
     {
-      value: '2K+',
+      value: Number(databaseStats.activeAgents || 0).toLocaleString('en-PH'),
       label: 'Active Agents',
       icon: UsersRound,
-      variant: 'dark',
     },
     {
-      value: '300+',
+      value: Number(databaseStats.developers || 0).toLocaleString('en-PH'),
       label: 'Developers',
       icon: Building2,
-      variant: 'gold',
     },
     {
-      value: '1,200+',
+      value: Number(databaseStats.properties || 0).toLocaleString('en-PH'),
       label: 'Properties',
       icon: House,
-      variant: 'dark',
     },
     {
-      value: '98%',
+      value: `${databaseStats.customerSatisfaction || 98}%`,
       label: 'Customer Satisfaction',
       icon: TrendingUp,
-      variant: 'gold',
     },
   ]
 
   return (
-    <div className="relative z-10 border-t border-white/10 bg-black/35 py-8 backdrop-blur-sm md:py-9">
-      <div className="mx-auto grid max-w-[1040px] grid-cols-1 gap-6 px-6 sm:grid-cols-2 md:grid-cols-4 md:gap-0 md:px-10 lg:px-0">
+    <div className="relative z-10 border-t border-[#d6b56d]/20 bg-black/65 py-6 backdrop-blur-md md:py-7">
+      <div className="mx-auto grid max-w-[1060px] grid-cols-1 gap-3 px-5 sm:grid-cols-2 md:grid-cols-4 md:px-8 lg:px-0">
         {stats.map((stat, index) => {
           const Icon = stat.icon
-          const isGold = stat.variant === 'gold'
-
           return (
             <div
               key={stat.label}
-              className={`flex items-center gap-5 md:px-8 ${
-                index < stats.length - 1 ? 'md:border-r md:border-white/20' : ''
+              className={`flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 ${
+                index < stats.length - 1 ? 'md:border-r-[#d6b56d]/20' : ''
               }`}
             >
-              <div
-                className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-lg shadow-lg ${
-                  isGold ? 'bg-[#d2a24f]' : 'bg-[#030b22]'
-                }`}
-              >
-                <Icon className="h-8 w-8 text-white" strokeWidth={2.5} />
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#d6b56d]/40 bg-[#071a3d] shadow-lg">
+                <Icon className="h-5 w-5 text-[#e1bd70]" strokeWidth={2.2} />
               </div>
 
               <div>
-                <p className="text-3xl font-black leading-none text-white">
+                <p className="text-2xl font-black leading-none text-white">
                   {stat.value}
                 </p>
 
-                <p className="mt-2 text-sm leading-tight text-white/75">
+                <p className="mt-1 text-xs leading-tight text-white/65">
                   {stat.label}
                 </p>
               </div>
@@ -1114,17 +1113,36 @@ function HomeStatsStrip() {
 }
 
 function PropertyDetailsModal({ property, onClose }) {
-  const agents = availableAgents.filter((agent) =>
-    property.agentIds.includes(agent.id)
-  )
+  const [selectedVariant, setSelectedVariant] = useState(property.variants?.[0] || property)
+  const [agents, setAgents] = useState([])
+  const [loadingAgents, setLoadingAgents] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    setLoadingAgents(true)
+
+    propertyApi.assignedAgents(selectedVariant.id)
+      .then((records) => {
+        if (active) setAgents(records)
+      })
+      .catch((error) => {
+        console.error(error)
+        if (active) setAgents([])
+      })
+      .finally(() => {
+        if (active) setLoadingAgents(false)
+      })
+
+    return () => { active = false }
+  }, [selectedVariant.id])
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 px-4 py-6 backdrop-blur-sm">
-      <div className="mx-auto w-full max-w-6xl overflow-hidden rounded-[22px] bg-[#fbf8f3] shadow-2xl md:rounded-[28px]">
-        <div className="relative h-[260px] overflow-hidden md:h-[420px]">
+      <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-[22px] bg-[#f8fafc] shadow-2xl md:rounded-[26px]">
+        <div className="relative h-[230px] overflow-hidden md:h-[330px]">
           <img
-            src={property.image}
-            alt={property.title}
+            src={selectedVariant.image}
+            alt={selectedVariant.title}
             className="h-full w-full object-cover"
           />
 
@@ -1133,69 +1151,93 @@ function PropertyDetailsModal({ property, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-5 top-5 rounded-full bg-white/95 p-3 text-[#2d1f18] shadow-lg transition hover:bg-white"
+            className="absolute right-5 top-5 rounded-full bg-white/95 p-3 text-[#111827] shadow-lg transition hover:bg-white"
             aria-label="Close property details"
           >
             <X className="h-5 w-5" />
           </button>
 
-          <div className="absolute bottom-6 left-6 right-6 text-white md:bottom-10 md:left-10">
-            <p className="inline-flex items-center gap-2 rounded-full bg-[#d6a77a] px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-black">
+          <div className="absolute bottom-6 left-6 right-6 text-white md:bottom-8 md:left-8">
+            <p className="inline-flex items-center gap-2 rounded-full bg-[#bfdbfe] px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-black">
               Featured Listing
             </p>
 
-            <h2 className="mt-4 text-[clamp(2rem,9vw,3.75rem)] font-black leading-tight">
-              {property.title}
+            <h2 className="mt-4 text-[clamp(1.8rem,7vw,3rem)] font-black leading-tight">
+              {selectedVariant.title}
             </h2>
 
             <p className="mt-3 flex items-center gap-2 text-base text-white/80 md:text-lg">
               <MapPin className="h-5 w-5" />
-              {property.location}
+              {selectedVariant.location}
             </p>
           </div>
         </div>
 
-        <div className="grid gap-8 p-6 lg:grid-cols-[1.25fr_0.75fr] lg:p-10">
+        <div className="grid gap-6 p-5 md:p-6 lg:grid-cols-[1.2fr_0.8fr] lg:p-8">
           <div>
-            <div className="flex flex-col gap-4 border-b border-[#e5d8c8] pb-8 md:flex-row md:items-end md:justify-between">
+            {property.variants?.length > 0 && (
+              <div className="mb-6 rounded-[20px] border border-[#e7dfcf] bg-white p-4">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9b762f]">
+                  Choose Property Type
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {property.variants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      onClick={() => setSelectedVariant(variant)}
+                      className={`rounded-xl border px-4 py-2.5 text-sm font-bold transition ${
+                        selectedVariant.id === variant.id
+                          ? 'border-[#0d1b4c] bg-[#0d1b4c] text-white'
+                          : 'border-[#dbe4f0] bg-[#f8fafc] text-[#111827] hover:border-[#d6b56d]'
+                      }`}
+                    >
+                      {variant.type || 'Property Type'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-4 border-b border-[#dbe4f0] pb-8 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#a56b3f]">
+                <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#111827]">
                   Property Details
                 </p>
 
-                <h3 className="mt-2 text-3xl font-black text-[#2d1f18] md:text-4xl">
-                  {formatPrice(property)}
+                <h3 className="mt-2 text-3xl font-black text-[#111827]">
+                  {formatPrice(selectedVariant)}
                 </h3>
               </div>
 
               <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4 md:w-auto">
-                <Spec icon={BedDouble} label="Beds" value={property.beds} />
-                <Spec icon={Bath} label="Baths" value={property.baths} />
-                <Spec icon={Car} label="Parking" value={property.parking} />
-                <Spec icon={Ruler} label="Area" value={property.floorArea} />
+                <Spec icon={BedDouble} label="Beds" value={selectedVariant.beds} />
+                <Spec icon={Bath} label="Baths" value={selectedVariant.baths} />
+                <Spec icon={Car} label="Parking" value={selectedVariant.parking} />
+                <Spec icon={Ruler} label="Area" value={selectedVariant.floorArea} />
               </div>
             </div>
 
             <p className="mt-8 text-lg leading-relaxed text-gray-600">
-              {property.description}
+              {selectedVariant.description}
             </p>
 
             <div className="mt-8 grid gap-3 md:grid-cols-3">
-              {property.highlights.map((highlight) => (
+              {(selectedVariant.highlights || []).map((highlight) => (
                 <div
                   key={highlight}
                   className="flex items-start gap-3 rounded-2xl bg-white p-4 shadow-sm"
                 >
                   <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-                  <p className="text-sm font-semibold text-[#2d1f18]">
+                  <p className="text-sm font-semibold text-[#111827]">
                     {highlight}
                   </p>
                 </div>
               ))}
             </div>
 
-            <div className="mt-8 rounded-[24px] bg-[#2d1f18] p-6 text-white">
-              <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#d6a77a]">
+            <div className="mt-6 rounded-[22px] bg-[#0d1b4c] p-5 text-white">
+              <p className="text-sm font-bold uppercase tracking-[0.25em] text-white">
                 Buyer Inquiry Process
               </p>
 
@@ -1206,7 +1248,7 @@ function PropertyDetailsModal({ property, onClose }) {
                   'Agent coordinates the site viewing or next buying step.',
                 ].map((step, index) => (
                   <div key={step} className="rounded-2xl bg-white/10 p-4">
-                    <p className="text-2xl font-black text-[#d6a77a]">
+                    <p className="text-2xl font-black text-white">
                       0{index + 1}
                     </p>
                     <p className="mt-2 text-sm leading-relaxed text-white/80">
@@ -1218,69 +1260,82 @@ function PropertyDetailsModal({ property, onClose }) {
             </div>
           </div>
 
-          <aside className="rounded-[24px] bg-white p-5 shadow-lg">
+          <aside className="rounded-[22px] bg-white p-5 shadow-lg">
             <div className="mb-5">
-              <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#a56b3f]">
+              <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#111827]">
                 Available Agents
               </p>
-              <h3 className="mt-2 text-2xl font-black text-[#2d1f18]">
+              <h3 className="mt-2 text-2xl font-black text-[#111827]">
                 Contact for this property
               </h3>
             </div>
 
             <div className="space-y-4">
+              {loadingAgents && (
+                <div className="rounded-2xl border border-dashed border-[#dbe4f0] p-6 text-center text-sm text-gray-500">
+                  Loading available agents...
+                </div>
+              )}
+
+              {!loadingAgents && agents.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-[#dbe4f0] p-6 text-center text-sm text-gray-500">
+                  Wala pang agent na pumili ng property na ito.
+                </div>
+              )}
+
               {agents.map((agent) => (
                 <div
                   key={agent.id}
-                  className="rounded-2xl border border-[#eadccd] p-4"
+                  className="rounded-2xl border border-[#dbe4f0] p-4"
                 >
                   <div className="flex gap-4">
-                    <img
-                      src={agent.image}
-                      alt={agent.name}
-                      className="h-16 w-16 rounded-2xl object-cover"
-                    />
+                    <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#0d1b4c] text-xl font-black text-white">
+                      <span>{String(agent.name || 'A').charAt(0).toUpperCase()}</span>
+                    </div>
 
                     <div>
-                      <h4 className="font-black text-[#2d1f18]">
+                      <h4 className="font-black text-[#111827]">
                         {agent.name}
                       </h4>
                       <p className="text-sm text-gray-500">{agent.role}</p>
-                      <p className="mt-1 text-xs font-semibold text-[#a56b3f]">
+                      <p className="mt-1 text-xs font-semibold text-[#111827]">
                         {agent.area}
                       </p>
                     </div>
                   </div>
 
-                  <p className="mt-4 rounded-xl bg-[#f8f3ed] px-4 py-3 text-sm font-semibold text-[#2d1f18]">
-                    {agent.response}
-                  </p>
+                  <div className="mt-4 space-y-2 rounded-xl bg-[#eef4ff] px-4 py-3 text-sm font-semibold text-[#111827]">
+                    <p className="flex items-center gap-2"><Phone className="h-4 w-4" />{agent.phone || 'No mobile number'}</p>
+                    <p className="flex items-center gap-2 break-all"><Mail className="h-4 w-4" />{agent.email || 'No email'}</p>
+                  </div>
 
                   <div className="mt-4 grid grid-cols-3 gap-2">
                     <a
-                      href={`tel:${agent.phone.replaceAll(' ', '')}`}
-                      className="inline-flex items-center justify-center rounded-xl bg-[#2d1f18] px-3 py-3 text-white transition hover:bg-[#3f2c22]"
+                      href={agent.phone ? `tel:${agent.phone.replaceAll(' ', '')}` : undefined}
+                      className="inline-flex items-center justify-center rounded-xl bg-[#0d1b4c] px-3 py-3 text-white transition hover:bg-[#09122f]"
                       aria-label={`Call ${agent.name}`}
                     >
                       <Phone className="h-4 w-4" />
                     </a>
 
                     <a
-                      href={`mailto:${agent.email}?subject=Inquiry for ${property.title}`}
-                      className="inline-flex items-center justify-center rounded-xl bg-[#d6a77a] px-3 py-3 text-black transition hover:bg-[#c7955f]"
+                      href={agent.email ? `mailto:${agent.email}?subject=Inquiry for ${selectedVariant.title} - ${selectedVariant.type}` : undefined}
+                      className="inline-flex items-center justify-center rounded-xl bg-[#bfdbfe] px-3 py-3 text-black transition hover:bg-[#1d4ed8]"
                       aria-label={`Email ${agent.name}`}
                     >
                       <Mail className="h-4 w-4" />
                     </a>
 
                     <a
-                      href={`sms:${agent.phone.replaceAll(' ', '')}?body=Hi ${agent.name}, I am interested in ${property.title} in ${property.location}.`}
-                      className="inline-flex items-center justify-center rounded-xl border border-[#d6a77a] px-3 py-3 text-[#2d1f18] transition hover:bg-[#f8f3ed]"
+                      href={agent.phone ? `sms:${agent.phone.replaceAll(' ', '')}?body=Hi ${agent.name}, I am interested in ${selectedVariant.title} - ${selectedVariant.type} in ${selectedVariant.location}.` : undefined}
+                      className="inline-flex items-center justify-center rounded-xl border border-[#bfdbfe] px-3 py-3 text-[#111827] transition hover:bg-[#eef4ff]"
                       aria-label={`Message ${agent.name}`}
                     >
                       <MessageCircle className="h-4 w-4" />
                     </a>
                   </div>
+
+                  <AgentSocialLinks socials={agent.socials} compact />
                 </div>
               ))}
             </div>
@@ -1294,8 +1349,8 @@ function PropertyDetailsModal({ property, onClose }) {
 function Spec({ icon: Icon, label, value }) {
   return (
     <div className="rounded-2xl bg-white px-4 py-3 text-center shadow-sm">
-      <Icon className="mx-auto h-5 w-5 text-[#a56b3f]" />
-      <p className="mt-1 text-lg font-black text-[#2d1f18]">{value}</p>
+      <Icon className="mx-auto h-5 w-5 text-[#111827]" />
+      <p className="mt-1 text-lg font-black text-[#111827]">{value}</p>
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
         {label}
       </p>
@@ -1304,7 +1359,7 @@ function Spec({ icon: Icon, label, value }) {
 }
 
 function formatPrice(property) {
-  return `${peso}${property.priceValue.toFixed(1)}M`
+  return formatPropertyPrice(property)
 }
 
 export default Hero

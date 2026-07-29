@@ -48,20 +48,16 @@ function Login() {
           session.agentId
         )
 
-        localStorage.setItem(
-          'agentData',
-          JSON.stringify(
-            session.agentData
-          )
-        )
+      }
+      localStorage.setItem('mustChangePassword', String(Boolean(session.mustChangePassword)))
+      if (session.mustChangePassword) {
+        localStorage.setItem('activeDashboardPage', 'profile')
       }
 
       navigate('/dashboard', {
         replace: true,
       })
     } catch (error) {
-      console.log(error)
-
       alert(error.message)
     } finally {
       setLoading(false)
@@ -69,10 +65,10 @@ function Login() {
   }
 
   return (
-    <section className="min-h-screen bg-[#f6f1eb] flex items-center justify-center px-6">
+    <section className="min-h-screen bg-[#f4f7fb] flex items-center justify-center px-6">
       <div className="bg-white w-full max-w-md p-10 rounded-[35px] shadow-2xl">
 
-        <h1 className="text-4xl font-black text-[#3b281f] text-center">
+        <h1 className="text-4xl font-black text-[#111827] text-center">
           Login
         </h1>
 
@@ -143,12 +139,12 @@ function Login() {
             disabled={loading}
             className="
               w-full
-              bg-[#3b281f]
+              bg-[#0d1b4c]
               text-white
               py-4
               rounded-2xl
               font-semibold
-              hover:bg-[#2a1d17]
+              hover:bg-[#09122f]
               transition-all
               disabled:opacity-50
             "

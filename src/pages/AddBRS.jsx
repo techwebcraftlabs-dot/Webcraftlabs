@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { brsApi } from "../lib/api";
+import { agentApi, brsApi, developerApi, teamApi } from "../lib/api";
 
 const initialFormData = {
   brsId: "",
@@ -45,6 +45,7 @@ const initialFormData = {
 const initialRateDistribution = [
   { role: "Developer", name: "", rate: "" },
   { role: "HLC", name: "", rate: "" },
+  { role: "Sales Director", name: "", rate: "" },
   { role: "Assistant HLC 1", name: "", rate: "" },
   { role: "Assistant HLC 2", name: "", rate: "" },
   { role: "JBA", name: "JBA", rate: "" },
@@ -61,19 +62,171 @@ const initialRateDistribution = [
 
 function AddBRS() {
   const navigate = useNavigate();
+  const isAdministrator = localStorage.getItem("role") === "Administrator";
   const [formData, setFormData] =
     useState(initialFormData);
   const [rateDistribution, setRateDistribution] =
     useState(initialRateDistribution);
   const [saving, setSaving] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  const [developerProjects, setDeveloperProjects] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const propertySelectionRef = useRef({ developer: "", project: "" });
+  const hlcCodeRef = useRef("");
+  const developerOptions = uniqueLabels(
+    developerProjects.map((item) => item.developerName)
+  );
+  const projectOptions = uniqueLabels(
+    developerProjects
+      .filter(
+        (item) =>
+          normalizeLabel(item.developerName) ===
+          normalizeLabel(formData.developer)
+      )
+      .map((item) => item.project)
+  );
+  const rateBalance = getRateBalance(rateDistribution);
+
+  useEffect(() => {
+    const loadNextBrsNumber = async () => {
+      try {
+        const { brsId } = await brsApi.nextNumber();
+        setFormData((current) => ({ ...current, brsId }));
+      } catch (error) {
+        console.error("Unable to load the next BRS number.", error);
+      }
+    };
+
+    loadNextBrsNumber();
+  }, []);
+
+  useEffect(() => {
+    const loadDeveloperProjects = async () => {
+      try {
+        const records = await developerApi.list();
+        setDeveloperProjects(records);
+
+        const selected = propertySelectionRef.current;
+        const savedProject = findDeveloperProject(
+          records,
+          selected.developer,
+          selected.project
+        );
+
+        if (savedProject) {
+          setFormData((current) => ({
+            ...current,
+            lts: savedProject.lts || "",
+            projectLocation: savedProject.projectLocation || "",
+          }));
+          setRateDistribution((currentRows) =>
+            withDeveloperRate(currentRows, savedProject.developerRate)
+          );
+        }
+      } catch (error) {
+        console.error("Unable to load developer projects.", error);
+      }
+    };
+
+    loadDeveloperProjects();
+  }, []);
+
+  useEffect(() => {
+    const loadAssignments = async () => {
+      try {
+        const records = await agentApi.brsOptions();
+        let teamRecords = [];
+        try {
+          teamRecords = await teamApi.list();
+        } catch {
+          teamRecords = [];
+        }
+        setAgents(records);
+        setTeams(teamRecords);
+
+        const agent = findAgentByHlcCode(records, hlcCodeRef.current);
+        if (!agent) return;
+
+        setFormData((current) => ({ ...current, teamName: agent.team || "" }));
+        setRateDistribution((currentRows) =>
+          withAgentAssignments(currentRows, agent, null, teamRecords, records)
+        );
+      } catch (error) {
+        console.error("Unable to load agents.", error);
+      }
+    };
+
+    loadAssignments();
+  }, []);
 
   const handleChange = (e) => {
     const { name, type, checked, value } = e.target;
+    const nextValue = type === "checkbox" ? checked : value;
 
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
+    if (name === "buyerBirthdate") {
+      setFormData((current) => ({
+        ...current,
+        buyerBirthdate: value,
+        buyerAge: calculateAge(value),
+      }));
+      return;
+    }
+
+    if (name === "hlcCode") {
+      hlcCodeRef.current = value;
+      const agent = findAgentByHlcCode(agents, value);
+      const savedProject = findDeveloperProject(
+        developerProjects,
+        formData.developer,
+        formData.project
+      );
+
+      setFormData((current) => ({
+        ...current,
+        hlcCode: value,
+        teamName: agent?.team || "",
+      }));
+      setRateDistribution((currentRows) =>
+        withAgentAssignments(currentRows, agent, savedProject, teams, agents)
+      );
+      return;
+    }
+
+    if (!["developer", "project"].includes(name)) {
+      setFormData((current) => ({ ...current, [name]: nextValue }));
+      return;
+    }
+
+    const nextDeveloper = name === "developer" ? value : formData.developer;
+    const nextProject = name === "developer" ? "" : value;
+    propertySelectionRef.current = {
+      developer: nextDeveloper,
+      project: nextProject,
+    };
+    const savedProject = findDeveloperProject(
+      developerProjects,
+      nextDeveloper,
+      nextProject
+    );
+
+    setFormData((current) => ({
+      ...current,
+      developer: nextDeveloper,
+      project: nextProject,
+      lts: savedProject?.lts || "",
+      projectLocation: savedProject?.projectLocation || "",
+    }));
+    const agent = findAgentByHlcCode(agents, formData.hlcCode);
+    setRateDistribution((currentRows) =>
+      withAgentAssignments(
+        withDeveloperRate(currentRows, savedProject?.developerRate),
+        agent,
+        savedProject,
+        teams,
+        agents
+      )
+    );
   };
 
   const handleRateChange = (index, field, value) => {
@@ -104,15 +257,23 @@ function AddBRS() {
   };
 
   const handleSave = async () => {
-    if (!formData.brsId || !formData.buyer || !formData.project) {
-      alert("Please fill out BRS No., Buyer, and Project.");
+    if (!formData.buyer || !formData.project) {
+      alert("Please fill out Buyer and Project.");
+      return;
+    }
+
+    if (Math.abs(rateBalance.difference) > 0.0001) {
+      const direction = rateBalance.difference > 0 ? "Kulang" : "Sobra";
+      alert(
+        `${direction} ng ${Math.abs(rateBalance.difference).toFixed(2)}% ang rate distribution. Developer's Rate: ${rateBalance.developerRate.toFixed(2)}%, total hatian: ${rateBalance.distributedRate.toFixed(2)}%.`
+      );
       return;
     }
 
     try {
       setSaving(true);
 
-      await brsApi.create({
+      const created = await brsApi.create({
         ...formData,
         amountDue: Number(cleanNumber(formData.amountDue)) || 0,
         developerDeductions:
@@ -129,7 +290,16 @@ function AddBRS() {
         status: "For Approval",
       });
 
-      alert("BRS saved successfully.");
+      for (const file of attachments) {
+        await brsApi.uploadAttachment(created.id, {
+          fileName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          data: await fileToBase64(file),
+        });
+      }
+
+      alert(isAdministrator ? "BRS saved successfully." : "BRS submitted for administrator approval.");
+      localStorage.setItem("activeDashboardPage", "brs");
       navigate("/dashboard");
     } catch (error) {
       console.error(error);
@@ -143,7 +313,7 @@ function AddBRS() {
     <section className="bg-[#f4f7fb] min-h-screen p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-black text-[#0d1b4c]">
+          <h1 className="text-3xl font-black text-[#111827]">
             Add BRS
           </h1>
 
@@ -175,7 +345,8 @@ function AddBRS() {
           label="BRS No."
           name="brsId"
           value={formData.brsId}
-          onChange={handleChange}
+          placeholder="Loading..."
+          readOnly
         />
         <TextField
           label="Tripping Date"
@@ -251,22 +422,26 @@ function AddBRS() {
           label="Age"
           name="buyerAge"
           value={formData.buyerAge}
-          onChange={handleChange}
+          placeholder="Automatic from birthdate"
+          readOnly
         />
       </FormSection>
 
       <FormSection title="Property Details">
-        <TextField
+        <SelectField
           label="Developer"
           name="developer"
           value={formData.developer}
           onChange={handleChange}
+          options={developerOptions}
         />
-        <TextField
+        <SelectField
           label="Project"
           name="project"
           value={formData.project}
           onChange={handleChange}
+          options={projectOptions}
+          disabled={!formData.developer}
         />
         <TextField
           label="LTS"
@@ -412,6 +587,8 @@ function AddBRS() {
         formData={formData}
         rateDistribution={rateDistribution}
         onChange={handleChange}
+        attachments={attachments}
+        onAttachmentsChange={setAttachments}
       />
     </section>
   );
@@ -421,11 +598,52 @@ function cleanNumber(value) {
   return String(value || "").replace(/,/g, "");
 }
 
+function calculateAge(birthdate, today = new Date()) {
+  const [year, month, day] = String(birthdate || "")
+    .split("-")
+    .map(Number);
+
+  if (!year || !month || !day) return "";
+
+  let age = today.getFullYear() - year;
+  const birthdayHasPassed =
+    today.getMonth() + 1 > month ||
+    (today.getMonth() + 1 === month && today.getDate() >= day);
+
+  if (!birthdayHasPassed) age -= 1;
+  return age >= 0 ? String(age) : "";
+}
+
+function getRateBalance(rows = []) {
+  const developerRate = rows
+    .filter((row) => normalizeLabel(row.role) === "developer")
+    .reduce((total, row) => total + (Number(row.rate) || 0), 0);
+  const distributedRate = rows
+    .filter((row) => normalizeLabel(row.role) !== "developer")
+    .reduce((total, row) => total + (Number(row.rate) || 0), 0);
+
+  return {
+    developerRate,
+    distributedRate,
+    difference: developerRate - distributedRate,
+  };
+}
+
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function formatPercent(value) {
+  const percent = Number(value) || 0;
+
+  if (percent === 0) {
+    return "0%";
+  }
+
+  return `${percent.toFixed(2).replace(/\.00$/, "")}%`;
 }
 
 function getAccountAmount(formData) {
@@ -461,6 +679,8 @@ function BRSReleaseSection({
   formData,
   rateDistribution,
   onChange,
+  attachments,
+  onAttachmentsChange,
 }) {
   const amountDue = getComputedAmountDue(
     formData,
@@ -496,6 +716,12 @@ function BRSReleaseSection({
           placeholder="Notes..."
           className="w-full border border-gray-300 rounded-2xl p-5 outline-none resize-y focus:ring-2 focus:ring-[#2563eb]"
         />
+
+        <AttachmentPicker
+          files={attachments}
+          onChange={onAttachmentsChange}
+          disabled={false}
+        />
       </div>
 
       <div className="bg-white rounded-3xl shadow-lg p-8 mb-8">
@@ -513,7 +739,7 @@ function BRSReleaseSection({
           />
           <ReadOnlyField
             label="Received %"
-            value={`${receivedPercent.toFixed(0)}%`}
+            value={formatPercent(receivedPercent)}
           />
           <TextField
             label="Developer Deductions"
@@ -553,6 +779,78 @@ function BRSReleaseSection({
       </div>
     </>
   );
+}
+
+const MAX_ATTACHMENT_SIZE = 3 * 1024 * 1024;
+
+function AttachmentPicker({ files, onChange, disabled }) {
+  const openFile = (file) => {
+    const url = URL.createObjectURL(file);
+    window.open(url, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+  };
+
+  const handleFiles = (event) => {
+    const selected = Array.from(event.target.files || []);
+    const oversized = selected.find((file) => file.size > MAX_ATTACHMENT_SIZE);
+
+    if (oversized) {
+      alert(`${oversized.name} is larger than the 3 MB attachment limit.`);
+    }
+
+    onChange([
+      ...files,
+      ...selected.filter((file) => file.size <= MAX_ATTACHMENT_SIZE),
+    ]);
+    event.target.value = "";
+  };
+
+  return (
+    <div className="mt-5">
+      <Label>Attach Files</Label>
+      <input
+        type="file"
+        accept="application/pdf,image/jpeg,image/png,image/webp"
+        multiple
+        disabled={disabled}
+        onChange={handleFiles}
+        className="block w-full rounded-xl border border-gray-300 bg-white p-3 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-[#2563eb] file:px-4 file:py-2 file:font-semibold file:text-white"
+      />
+      <p className="mt-2 text-xs text-gray-400">Maximum 3 MB per file.</p>
+      {files.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {files.map((file, index) => (
+            <div key={`${file.name}-${index}`} className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-[#111827]">
+              <button
+                type="button"
+                onClick={() => openFile(file)}
+                className="font-semibold hover:underline"
+              >
+                {file.name}
+              </button>
+              <button
+                type="button"
+                aria-label={`Remove ${file.name}`}
+                onClick={() => onChange(files.filter((_, itemIndex) => itemIndex !== index))}
+                className="font-bold text-rose-600"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+    reader.readAsDataURL(file);
+  });
 }
 
 function ReadOnlyField({ label, value }) {
@@ -712,6 +1010,94 @@ function RateDistributionField({
       )}
     </div>
   );
+}
+
+function normalizeLabel(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function uniqueLabels(values) {
+  const labels = new Map();
+
+  values.filter(Boolean).forEach((value) => {
+    const normalized = normalizeLabel(value);
+    if (!labels.has(normalized)) labels.set(normalized, value);
+  });
+
+  return Array.from(labels.values());
+}
+
+function findDeveloperProject(records, developer, project) {
+  return records.find(
+    (item) =>
+      normalizeLabel(item.developerName) === normalizeLabel(developer) &&
+      normalizeLabel(item.project) === normalizeLabel(project)
+  );
+}
+
+function withDeveloperRate(rows, rate) {
+  return rows.map((row) =>
+    normalizeLabel(row.role) === "developer"
+      ? { ...row, rate: rate ?? "" }
+      : row
+  );
+}
+
+function findAgentByHlcCode(agents, hlcCode) {
+  const code = normalizeLabel(hlcCode);
+  if (!code) return null;
+  return agents.find((agent) => normalizeLabel(agent.hlcCode) === code) || null;
+}
+
+function withAgentAssignments(rows, agent, project, teams = [], agents = []) {
+  const fullName = agent
+    ? [agent.firstName, agent.middleName, agent.lastName].filter(Boolean).join(" ")
+    : "";
+  const isCrossLocality =
+    agent &&
+    project &&
+    normalizeLocation(agent.locality) !== normalizeLocation(project.projectLocation);
+  const assignedTeam = teams.find(
+    (team) => normalizeLabel(team.teamName) === normalizeLabel(agent?.team)
+  );
+  const assignedEvp = assignedTeam?.evpName || agent?.evp || "";
+
+  return rows.map((row) => {
+    const role = normalizeLabel(row.role);
+    if (role === "hlc") return { ...row, name: fullName };
+    if (role === "sales director") {
+      return { ...row, name: agent?.salesDirector || "" };
+    }
+    if (role === "evp") return { ...row, name: assignedEvp };
+    if (role === "local sd") {
+      return {
+        ...row,
+        name: isCrossLocality
+          ? getCanonicalAgentName(agents, project?.assignedLsd)
+          : "",
+      };
+    }
+    return row;
+  });
+}
+
+function getCanonicalAgentName(agents, value) {
+  const target = normalizeLabel(value);
+  if (!target) return "";
+  const matched = agents.find((candidate) => {
+    const fullName = [candidate.firstName, candidate.middleName, candidate.lastName]
+      .filter(Boolean).join(" ");
+    const simpleName = [candidate.firstName, candidate.lastName]
+      .filter(Boolean).join(" ");
+    return [fullName, simpleName].some((name) => normalizeLabel(name) === target);
+  });
+  return matched
+    ? [matched.firstName, matched.middleName, matched.lastName].filter(Boolean).join(" ")
+    : String(value || "").trim();
+}
+
+function normalizeLocation(value) {
+  return normalizeLabel(value).replace(/\b(city|province)\b/g, "").trim();
 }
 
 export default AddBRS;

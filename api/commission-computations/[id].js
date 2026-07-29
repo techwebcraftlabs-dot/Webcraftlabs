@@ -1,10 +1,12 @@
 import { getJsonRecord, updateJsonRecord } from "../_lib/jsonTable.js";
 import { handleError, readJson, sendJson } from "../_lib/http.js";
+import { requireSession } from "../_lib/auth.js";
 
 export default async function handler(req, res) {
   const { id } = req.query;
 
   try {
+    await requireSession(req, { roles: ["Administrator", "HLC", "EVP"] });
     if (req.method === "PUT" || req.method === "PATCH") {
       const current = await getJsonRecord("commission_computations", id);
 

@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, FileDown, Plus, Sheet, X } from "lucide-react";
+import { Eye, FileDown, FilterX, Plus, Sheet, X } from "lucide-react";
 
 import { brsApi, computationApi, voucherApi } from "../lib/api";
+import { EmptyState, Pagination, TableSkeleton } from "../components/ui/DataStates";
+import { useSavedFilters } from "../hooks/useSavedFilters";
+import PremiumPageHeader from "../components/dashboard/PremiumPageHeader";
 
 const peso = "\u20b1";
 
 function DeveloperVoucher({ setActivePage }) {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const role = localStorage.getItem("role") || "Agent";
+  const canManage = ["Administrator", "HLC", "EVP"].includes(role);
+  const { filters, updateFilter, resetFilters } = useSavedFilters("vouchers", { search: "", status: "All", pageSize: 10 });
+  const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
   const [voucherRows, setVoucherRows] = useState([]);
   const [brsRecords, setBrsRecords] = useState([]);
@@ -69,7 +74,7 @@ function DeveloperVoucher({ setActivePage }) {
 
   const viewData = useMemo(() => groupVoucherRows(voucherRows), [voucherRows]);
   const filteredData = viewData.filter((item) => {
-    const searchValue = search.toLowerCase();
+    const searchValue = filters.search.toLowerCase();
     const matchSearch = [
       item.voucherNo,
       item.buyerNames,
@@ -77,28 +82,42 @@ function DeveloperVoucher({ setActivePage }) {
       item.developer,
       item.project,
       item.voucherDate,
+      item.releasedDate,
       item.status,
     ]
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(searchValue));
 
     const matchStatus =
-      statusFilter === "All" ? true : item.status === statusFilter;
+      filters.status === "All" ? true : item.status === filters.status;
 
     return matchSearch && matchStatus;
   });
+  const pageCount = Math.max(1, Math.ceil(filteredData.length / filters.pageSize));
+  const safePage = Math.min(page, pageCount);
+  const visibleData = filteredData.slice((safePage - 1) * filters.pageSize, safePage * filters.pageSize);
 
   const allVisibleSelected =
-    filteredData.length > 0 &&
-    filteredData.every((item) => selectedIds.includes(item.id));
+    visibleData.length > 0 &&
+    visibleData.every((item) => selectedIds.includes(item.id));
 
   const handleStatusChange = async (id, value) => {
+    let statusRemarks = "";
+    if (value === "Not Found") {
+      statusRemarks = window.prompt("Enter remarks explaining why this voucher was not found:", "")?.trim() || "";
+      if (!statusRemarks) {
+        alert("Remarks are required when the status is Not Found.");
+        return;
+      }
+    }
     setVoucherRows((current) =>
       current.map((item) =>
         (item.voucherBatchId || item.id) === id
           ? {
               ...item,
               status: value,
+              statusRemarks: value === "Not Found" ? statusRemarks : "",
+              releasedDate: value === "Released" ? (item.releasedDate || new Date().toISOString()) : null,
             }
           : item
       )
@@ -111,6 +130,7 @@ function DeveloperVoucher({ setActivePage }) {
         (voucher?.buyers || []).map((buyer) =>
           voucherApi.patch(buyer.id, {
             status: value,
+            statusRemarks: value === "Not Found" ? statusRemarks : "",
           })
         )
       );
@@ -154,14 +174,20 @@ function DeveloperVoucher({ setActivePage }) {
   const handleSelectAll = () => {
     if (allVisibleSelected) {
       setSelectedIds((current) =>
-        current.filter((id) => !filteredData.some((item) => item.id === id))
+        current.filter((id) => !visibleData.some((item) => item.id === id))
       );
       return;
     }
 
     setSelectedIds((current) => [
-      ...new Set([...current, ...filteredData.map((item) => item.id)]),
+      ...new Set([...current, ...visibleData.map((item) => item.id)]),
     ]);
+  };
+
+  const handleAddVoucher = () => {
+    localStorage.removeItem("selectedVoucherBatch");
+    localStorage.removeItem("selectedBuyer");
+    setActivePage("create-voucher");
   };
 
   const statusColor = (status) => {
@@ -172,70 +198,65 @@ function DeveloperVoucher({ setActivePage }) {
         return "bg-orange-100 text-orange-700";
       case "Released":
         return "bg-green-100 text-green-700";
+      case "Not Found":
+        return "bg-red-100 text-red-700";
       default:
         return "bg-gray-100 text-gray-600";
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-[30px] bg-white p-8 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-black text-[#1f2937]">
-              Developer&apos;s Vouchers
-            </h1>
-            <p className="mt-2 text-gray-500">
-              Vouchers with commission releases and buyer computations.
-            </p>
-          </div>
+    <div className="space-y-5">
+      <PremiumPageHeader eyebrow="Commission Management" title={role === "Administrator" ? "Developer's Vouchers" : "My Commission Vouchers"} description={role === "Administrator" ? "Vouchers with commission releases and buyer computations." : "Only sales where you are included are shown here."} actions={<>
+            {canManage && (
+              <button
+                onClick={handleAddVoucher}
+                className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#2563eb] px-4 font-semibold text-white shadow-md shadow-blue-200"
+              >
+                <Plus className="h-5 w-5" />
+                Add Voucher
+              </button>
+            )}
 
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => setActivePage("create-voucher")}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#4f5dff] px-5 py-3 font-semibold text-white"
-            >
-              <Plus className="h-5 w-5" />
-              Add Voucher
-            </button>
-
-            <button className="inline-flex items-center gap-2 rounded-xl bg-red-500 px-5 py-3 font-semibold text-white">
+            <button className="inline-flex h-11 items-center gap-2 rounded-xl bg-red-500 px-4 text-sm font-semibold text-white shadow-sm">
               <FileDown className="h-5 w-5" />
               Export PDF
             </button>
 
-            <button className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-semibold text-white">
+            <button className="inline-flex h-11 items-center gap-2 rounded-xl bg-green-600 px-4 text-sm font-semibold text-white shadow-sm">
               <Sheet className="h-5 w-5" />
               Export Excel
             </button>
-          </div>
-        </div>
-      </div>
+          </>} />
 
-      <div className="rounded-[30px] bg-white p-6 shadow-sm">
-        <div className="grid gap-4 lg:grid-cols-2">
+      <div className="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
           <input
             type="text"
             placeholder="Search voucher, buyer, developer or project..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="rounded-xl border border-gray-200 px-4 py-3 outline-none focus:border-[#4f5dff] focus:ring-2 focus:ring-blue-100"
+            value={filters.search}
+            onChange={(e) => { updateFilter("search", e.target.value); setPage(1); }}
+            className="h-11 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-blue-100"
           />
 
           <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-gray-200 px-4 py-3 outline-none focus:border-[#4f5dff] focus:ring-2 focus:ring-blue-100"
+            value={filters.status}
+            onChange={(e) => { updateFilter("status", e.target.value); setPage(1); }}
+            className="h-11 rounded-xl border border-gray-200 bg-white px-4 outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-blue-100"
           >
             <option>All</option>
             <option>For Release</option>
-            <option>Hold</option>
+            {role === "Administrator" && <option>Hold</option>}
             <option>Released</option>
+            <option>Not Found</option>
           </select>
+          {(filters.search || filters.status !== "All") && <button onClick={() => { resetFilters(); setPage(1); }} className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600"><FilterX size={17} /> Clear filters</button>}
         </div>
+        <p className="mt-3 text-xs text-slate-400">Filters and rows-per-page are saved on this device.</p>
       </div>
 
-      <div className="overflow-auto rounded-[30px] bg-white p-6 shadow-sm">
+      <div className="overflow-hidden rounded-[24px] border border-slate-200/70 bg-white shadow-sm">
+        {canManage && <div className="p-6 pb-0">
         <div className="mb-5">
           <label className="flex items-center gap-3">
             <input
@@ -246,63 +267,57 @@ function DeveloperVoucher({ setActivePage }) {
             <span className="font-medium">Select All</span>
           </label>
         </div>
+        </div>}
 
-        <table className="w-full min-w-[950px]">
-          <thead>
-            <tr className="border-b">
-              <th className="py-4 text-left">Select</th>
-              <th className="py-4 text-left">Voucher No.</th>
-              <th className="py-4 text-left">Developer</th>
-              <th className="py-4 text-left">Project</th>
-              <th className="py-4 text-left">Saved Date</th>
-              <th className="py-4 text-left">Assigned Amount</th>
-              <th className="py-4 text-left">Computed</th>
-              <th className="py-4 text-left">Status</th>
-              <th className="py-4 text-left">Action</th>
+        <div className="responsive-table-wrap">
+        <table className="w-full min-w-[1050px]">
+          <thead className="bg-slate-50/90">
+            <tr className="border-b border-slate-100 text-xs font-black uppercase tracking-wide text-slate-500">
+              {canManage && <th className="px-4 py-5 text-left">Select</th>}
+              <th className="px-4 py-5 text-left">Voucher No.</th>
+              <th className="px-4 py-5 text-left">Developer</th>
+              <th className="px-4 py-5 text-left">Project</th>
+              <th className="px-4 py-5 text-left">Saved Date</th>
+              <th className="px-4 py-5 text-left">Released Date</th>
+              <th className="px-4 py-5 text-left">Assigned Amount</th>
+              <th className="px-4 py-5 text-center">Computed</th>
+              <th className="px-4 py-5 text-left">Status</th>
+              <th className="px-5 py-5 text-right">Action</th>
             </tr>
           </thead>
 
           <tbody>
-            {loading && (
-              <tr>
-                <td colSpan="9" className="py-10 text-center text-gray-500">
-                  Loading vouchers...
-                </td>
-              </tr>
-            )}
+            {loading && <TableSkeleton columns={canManage ? 10 : 9} rows={5} />}
 
             {!loading && filteredData.length === 0 && (
-              <tr>
-                <td colSpan="9" className="py-10 text-center text-gray-500">
-                  No vouchers yet.
-                </td>
-              </tr>
+              <tr><td colSpan={canManage ? 10 : 9}><EmptyState title={filters.search || filters.status !== "All" ? "No matching vouchers" : "No commission vouchers yet"} description={filters.search || filters.status !== "All" ? "Try another voucher number, buyer, developer, project, or clear the filters." : canManage ? "Create the first developer voucher to begin tracking commission releases." : "A voucher will appear once you are included in the sale's BRS rate distribution."} action={(filters.search || filters.status !== "All") ? <button onClick={resetFilters} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">Clear filters</button> : canManage ? <button onClick={handleAddVoucher} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">Add Voucher</button> : null} /></td></tr>
             )}
 
             {!loading &&
-              filteredData.map((item) => (
+              visibleData.map((item) => (
                 <tr
                   key={item.id}
                   onClick={() => setSelectedVoucher(item)}
-                  className="cursor-pointer border-b hover:bg-gray-50"
+                  className="cursor-pointer border-b border-slate-100 transition-colors hover:bg-blue-50/40"
                 >
-                  <td className="py-4">
+                  {canManage && <td className="px-4 py-5">
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(item.id)}
                       onClick={(event) => event.stopPropagation()}
                       onChange={() => handleSelect(item.id)}
                     />
-                  </td>
+                  </td>}
 
-                  <td className="font-semibold">{item.voucherNo}</td>
-                  <td>{item.developer || "-"}</td>
-                  <td>{item.project || "-"}</td>
-                  <td>{item.voucherDate}</td>
-                  <td className="font-bold text-emerald-700">
+                  <td className="px-4 py-5 font-black text-slate-900">{item.voucherNo}</td>
+                  <td className="px-4 py-5 font-medium text-slate-600">{item.developer || "-"}</td>
+                  <td className="max-w-[220px] px-4 py-5 font-medium text-slate-700"><span className="block truncate" title={item.project || ""}>{item.project || "-"}</span></td>
+                  <td className="px-4 py-5 text-sm font-medium text-slate-600">{item.voucherDate}</td>
+                  <td className="px-4 py-5 text-sm font-medium text-slate-600">{formatReleasedDate(item.releasedDate)}</td>
+                  <td className="px-4 py-5 font-black text-emerald-700">
                     {formatCurrency(item.assignedTotal)}
                   </td>
-                  <td>
+                  <td className="px-4 py-5 text-center">
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-bold ${
                         item.doneCount === item.buyers.length
@@ -313,8 +328,8 @@ function DeveloperVoucher({ setActivePage }) {
                       {item.doneCount}/{item.buyers.length}
                     </span>
                   </td>
-                  <td>
-                    <select
+                  <td className="px-4 py-5">
+                    {canManage ? <select
                       value={item.status}
                       onClick={(event) => event.stopPropagation()}
                       onChange={(e) =>
@@ -328,15 +343,17 @@ function DeveloperVoucher({ setActivePage }) {
                       <option>For Release</option>
                       <option>Hold</option>
                       <option>Released</option>
-                    </select>
+                      <option>Not Found</option>
+                    </select> : <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusColor(item.status)}`}>{item.status}</span>}
                   </td>
-                  <td>
+                  <td className="px-5 py-5 text-right">
                     <button
                       onClick={(event) => {
                         event.stopPropagation();
-                        handleOpenVoucher(item);
+                        if (canManage) handleOpenVoucher(item);
+                        else setSelectedVoucher(item);
                       }}
-                      className="inline-flex items-center gap-2 rounded-lg bg-[#4f5dff] px-4 py-2 text-sm text-white"
+                      className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-bold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
                     >
                       <Eye className="h-4 w-4" />
                       View
@@ -346,6 +363,8 @@ function DeveloperVoucher({ setActivePage }) {
               ))}
           </tbody>
         </table>
+        </div>
+        {!loading && <Pagination page={safePage} pageSize={filters.pageSize} total={filteredData.length} onPageChange={setPage} onPageSizeChange={(size) => { updateFilter("pageSize", size); setPage(1); }} />}
       </div>
 
       {selectedVoucher && (
@@ -367,8 +386,8 @@ function VoucherDetailsModal({ voucher, computations, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-6xl overflow-auto rounded-[28px] bg-white shadow-2xl">
-        <div className="sticky top-0 flex items-start justify-between gap-4 border-b bg-white p-6">
+      <div className="voucher-details-modal max-h-[90vh] w-full max-w-6xl overflow-auto rounded-[28px] bg-white shadow-2xl">
+        <div className="voucher-details-header sticky top-0 flex items-start justify-between gap-4 border-b bg-white p-6">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">
               Voucher Buyers
@@ -383,21 +402,48 @@ function VoucherDetailsModal({ voucher, computations, onClose }) {
 
           <button
             onClick={onClose}
-            className="rounded-xl bg-gray-100 p-2 text-gray-600 hover:bg-gray-200"
+            className="voucher-details-close rounded-xl bg-gray-100 p-2 text-gray-600 hover:bg-gray-200"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="grid gap-4 p-6 md:grid-cols-4">
+        <div className="grid gap-4 p-6 md:grid-cols-5">
           <DetailCard label="Voucher Gross" value={formatCurrency(voucher.grossComm)} />
           <DetailCard label="Assigned Amount" value={formatCurrency(voucher.assignedTotal)} />
           <DetailCard label="Balance" value={formatCurrency(voucher.grossComm - voucher.assignedTotal)} />
           <DetailCard label="Buyers" value={voucher.buyers.length} />
+          <DetailCard label="Released Date" value={formatReleasedDate(voucher.releasedDate)} />
         </div>
 
+        {voucher.status === "Not Found" && <div className="px-6 pb-6"><div className="voucher-not-found rounded-2xl border border-red-200 bg-red-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-red-600">Not Found Remarks</p><p className="mt-2 text-sm leading-6 text-red-800">{voucher.statusRemarks || "No remarks provided."}</p></div></div>}
+
+        {voucher.voucherFileName && (
+          <div className="px-6 pb-6">
+            <div className="voucher-attachment rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+              <p className="voucher-attachment-label text-sm font-semibold text-gray-600">
+                Uploaded Voucher
+              </p>
+              {voucher.voucherPreview ? (
+                <button
+                  type="button"
+                  onClick={() => openVoucherFile(voucher.voucherPreview)}
+                  className="voucher-attachment-link mt-1 inline-block break-all font-bold text-blue-700 underline decoration-blue-300 underline-offset-4 hover:text-blue-900"
+                  title="Open uploaded voucher in a new tab"
+                >
+                  {voucher.voucherFileName}
+                </button>
+              ) : (
+                <p className="voucher-attachment-name mt-1 break-all font-bold text-gray-700">
+                  {voucher.voucherFileName}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="px-6 pb-6">
-          <div className="overflow-auto rounded-2xl border">
+          <div className="voucher-details-table overflow-auto rounded-2xl border">
             <table className="w-full min-w-[900px]">
               <thead>
                 <tr className="bg-[#0d1b4c] text-sm text-white">
@@ -414,10 +460,10 @@ function VoucherDetailsModal({ voucher, computations, onClose }) {
                   <tr
                     key={buyer.id}
                     className={`border-b text-sm ${
-                      selectedBuyer?.id === buyer.id ? "bg-blue-50" : ""
+                      selectedBuyer?.id === buyer.id ? "voucher-buyer-selected bg-blue-50" : ""
                     }`}
                   >
-                    <td className="p-3 font-bold text-[#0d1b4c]">
+                    <td className="p-3 font-bold text-[#111827]">
                       {buyer.brsId || "-"}
                     </td>
                     <td className="p-3">{buyer.buyer || "-"}</td>
@@ -432,7 +478,7 @@ function VoucherDetailsModal({ voucher, computations, onClose }) {
                       <button
                         type="button"
                         onClick={() => setSelectedBuyer(buyer)}
-                        className="rounded-lg bg-[#4f5dff] px-4 py-2 text-sm font-semibold text-white"
+                        className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white"
                       >
                         View
                       </button>
@@ -450,12 +496,12 @@ function VoucherDetailsModal({ voucher, computations, onClose }) {
               {selectedBuyer.buyer} Computation - {formatCurrency(selectedBuyer.commissionAmount)}
             </h3>
             {!selectedComputation && (
-              <div className="rounded-2xl bg-gray-50 p-6 text-center text-gray-500">
+              <div className="voucher-empty-computation rounded-2xl bg-gray-50 p-6 text-center text-gray-500">
                 No saved computation yet for this buyer.
               </div>
             )}
             {selectedComputation && (
-              <div className="overflow-auto rounded-2xl border">
+              <div className="voucher-details-table overflow-auto rounded-2xl border">
                 <table className="w-full min-w-[1400px]">
                   <thead>
                     <tr className="bg-[#0d1b4c] text-sm text-white">
@@ -477,7 +523,7 @@ function VoucherDetailsModal({ voucher, computations, onClose }) {
                   <tbody>
                     {(selectedComputation.rows || []).map((row, index) => (
                       <tr key={`${row.role}-${index}`} className="border-b text-sm">
-                        <td className="p-3 font-bold text-[#0d1b4c]">
+                        <td className="p-3 font-bold text-[#111827]">
                           {row.name || "-"}
                         </td>
                         <td className="p-3">{row.role || "-"}</td>
@@ -515,9 +561,9 @@ function VoucherDetailsModal({ voucher, computations, onClose }) {
 
 function DetailCard({ label, value }) {
   return (
-    <div className="rounded-2xl bg-gray-50 p-4">
+    <div className="voucher-detail-card rounded-2xl bg-gray-50 p-4">
       <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-2 text-xl font-black text-[#0d1b4c]">{value}</p>
+      <p className="mt-2 text-xl font-black text-[#111827]">{value}</p>
     </div>
   );
 }
@@ -594,8 +640,12 @@ function groupVoucherRows(rows) {
         assignedTotal: 0,
         doneCount: 0,
         status: row.status || "For Release",
+        statusRemarks: row.statusRemarks || "",
+        releasedDate: row.releasedDate || null,
         developer: row.developer || "",
         project: row.project || "",
+        voucherFileName: row.voucherFileName || "",
+        voucherPreview: row.voucherPreview || "",
         buyers: [],
       });
     }
@@ -603,11 +653,15 @@ function groupVoucherRows(rows) {
     const voucher = grouped.get(key);
 
     voucher.buyers.push(row);
-    voucher.assignedTotal += Number(row.commissionAmount) || 0;
+    voucher.assignedTotal += Math.max(0, Number(row.commissionAmount) || 0);
     voucher.doneCount += row.computationStatus === "Done" ? 1 : 0;
     voucher.grossComm = Number(row.amount) || voucher.grossComm;
     voucher.developer = mergeLabel(voucher.developer, row.developer);
     voucher.project = mergeLabel(voucher.project, row.project);
+    voucher.voucherFileName = voucher.voucherFileName || row.voucherFileName || "";
+    voucher.voucherPreview = voucher.voucherPreview || row.voucherPreview || "";
+    voucher.releasedDate = voucher.releasedDate || row.releasedDate || null;
+    voucher.statusRemarks = voucher.statusRemarks || row.statusRemarks || "";
     voucher.buyerNames = mergeLabel(voucher.buyerNames, row.buyer);
     voucher.brsIds = mergeLabel(voucher.brsIds, row.brsId);
   });
@@ -633,6 +687,35 @@ function mergeLabel(current = "", next = "") {
 
 function formatCurrency(value) {
   return `${peso}${Number(value || 0).toLocaleString()}`;
+}
+
+function formatReleasedDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function openVoucherFile(dataUrl) {
+  try {
+    const [metadata, encodedData] = dataUrl.split(",", 2);
+    const mimeType = metadata.match(/^data:([^;]+)/)?.[1] || "application/octet-stream";
+    const binary = atob(encodedData);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const objectUrl = URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+
+    window.open(objectUrl, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+  } catch (error) {
+    console.error(error);
+    alert("Unable to open the uploaded voucher.");
+  }
 }
 
 function formatDate(timestamp) {

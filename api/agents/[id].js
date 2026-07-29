@@ -3,11 +3,15 @@ import bcrypt from "bcryptjs";
 import { query } from "../_lib/db.js";
 import { agentColumnMap, agentSelect, pickAgentPayload } from "../_lib/agents.js";
 import { handleError, readJson, sendJson } from "../_lib/http.js";
+import { requireSession } from "../_lib/auth.js";
 
 export default async function handler(req, res) {
   const { id } = req.query;
 
   try {
+    const session = await requireSession(req, { selfId: id });
+    await query(`ALTER TABLE agents ADD COLUMN IF NOT EXISTS zonal_tax_rate DECIMAL(5, 2) NOT NULL DEFAULT 5.00`);
+    await query(`ALTER TABLE agents ADD COLUMN IF NOT EXISTS bdo_account_number VARCHAR(100) NULL AFTER mobile_number`);
     if (req.method === "GET") {
       const rows = await query(
         `SELECT ${agentSelect}
@@ -28,15 +32,33 @@ export default async function handler(req, res) {
 
     if (req.method === "PUT" || req.method === "PATCH") {
       const body = await readJson(req);
-      const payload = pickAgentPayload(body);
+      if (Object.hasOwn(body, "zonalTaxRate")) {
+        const zonalTaxRate = Number(body.zonalTaxRate);
+        if (!Number.isFinite(zonalTaxRate) || zonalTaxRate < 0 || zonalTaxRate > 100) {
+          sendJson(res, 400, { error: "Zonal tax rate must be between 0% and 100%." });
+          return;
+        }
+      }
+      const personalFields = new Set([
+        "firstName", "lastName", "middleName", "personalEmail", "mobileNumber", "bdoAccountNumber",
+        "address", "birthDate", "birthPlace", "civilStatus", "gender",
+      ]);
+      const safeBody = session.role === "Administrator"
+        ? Object.fromEntries(
+            Object.entries(body).filter(([field]) => field !== "hlcCode")
+          )
+        : Object.fromEntries(Object.entries(body).filter(([field]) => personalFields.has(field)));
+      const payload = pickAgentPayload(safeBody);
       const assignments = Object.keys(payload).map(
         (field) => `${agentColumnMap[field]} = :${field}`
       );
       const params = { ...payload, id };
 
-      if (body.password) {
+      if (session.role === "Administrator" && body.password) {
         assignments.push("password_hash = :passwordHash");
-        params.passwordHash = await bcrypt.hash(body.password, 10);
+        assignments.push("password_changed_at = NOW()");
+        assignments.push("password_reset_required = 1");
+        params.passwordHash = await bcrypt.hash(body.password, 12);
       }
 
       if (assignments.length === 0) {

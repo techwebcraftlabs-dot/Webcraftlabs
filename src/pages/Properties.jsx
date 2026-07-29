@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -13,10 +13,15 @@ import {
   Ruler,
   Search,
   SlidersHorizontal,
+  Plus,
   X,
 } from 'lucide-react'
 
-const peso = '\u20b1'
+import AgentSocialLinks from '../components/AgentSocialLinks'
+
+import { propertyApi } from '../lib/api'
+import { formatPropertyPrice, propertyPriceIntersects } from '../lib/propertyPrice'
+import { groupPropertiesByProject } from '../lib/propertyProjects'
 
 const agents = [
   {
@@ -269,48 +274,67 @@ const typeOptions = ['All', 'Condo', 'House', 'Villa', 'Townhouse', 'Penthouse',
 const budgetOptions = ['Any Budget', 'Under 7M', '7M - 15M', '15M+']
 
 const budgetFilters = {
-  'Under 7M': (price) => price < 7,
-  '7M - 15M': (price) => price >= 7 && price <= 15,
-  '15M+': (price) => price > 15,
+  'Under 7M': (property) => propertyPriceIntersects(property, 0, 6_999_999),
+  '7M - 15M': (property) => propertyPriceIntersects(property, 7_000_000, 15_000_000),
+  '15M+': (property) => propertyPriceIntersects(property, 15_000_001),
 }
 
 function Properties() {
+  const [directoryProperties, setDirectoryProperties] = useState(
+    () => properties.slice(0, 0)
+  )
+  const [showAddProperty, setShowAddProperty] = useState(false)
+  const [savingProperty, setSavingProperty] = useState(false)
+  const [propertyForm, setPropertyForm] = useState(getInitialPropertyForm)
   const [query, setQuery] = useState('')
   const [type, setType] = useState('All')
   const [budget, setBudget] = useState('Any Budget')
-  const [inquiry, setInquiry] = useState(null)
+  const [selectedProject, setSelectedProject] = useState(null)
+  const canManageProperties = false
+
+  useEffect(() => {
+    propertyApi.list()
+      .then((records) => setDirectoryProperties(records.map((property) => ({
+        ...property,
+        image: property.image || propertyApi.imageUrl(property.id),
+      }))))
+      .catch((error) => {
+        console.error(error)
+        setDirectoryProperties([])
+      })
+  }, [])
 
   const filteredProperties = useMemo(() => {
-    return properties.filter((property) => {
-      const searchText = `${property.title} ${property.location} ${property.type}`.toLowerCase()
+    const matchingVariants = directoryProperties.filter((property) => {
+      const searchText = `${property.developer || ''} ${property.project || property.title} ${property.location} ${property.type}`.toLowerCase()
       const matchesQuery = !query || searchText.includes(query.toLowerCase())
       const matchesType = type === 'All' || property.type === type
       const matchesBudget =
-        budget === 'Any Budget' || budgetFilters[budget]?.(property.priceValue)
+        budget === 'Any Budget' || budgetFilters[budget]?.(property)
 
       return matchesQuery && matchesType && matchesBudget
     })
-  }, [budget, query, type])
 
-  const openInquiry = (property) => {
-    const matchingAgents = agents.filter((agent) => {
-      return (
-        agent.specialties.includes(property.type) ||
-        agent.locations.includes(property.location)
-      )
-    })
-    const pool = matchingAgents.length > 0 ? matchingAgents : agents
-    const shuffledAgents = shuffleItems(pool).slice(0, Math.min(3, pool.length))
+    return groupPropertiesByProject(matchingVariants)
+  }, [budget, directoryProperties, query, type])
 
-    setInquiry({
-      property,
-      agents: shuffledAgents,
-    })
+  const saveProperty = async () => {
+    try {
+      setSavingProperty(true)
+      const created = await propertyApi.create(propertyForm)
+      setDirectoryProperties((current) => [created, ...current])
+      setPropertyForm(getInitialPropertyForm())
+      setShowAddProperty(false)
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setSavingProperty(false)
+    }
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f2eb] text-[#2d1f18]">
-      <header className="relative min-h-[440px] overflow-hidden bg-[#17120f] md:min-h-[500px]">
+    <main className="min-h-screen bg-[#f4f7fb] text-[#111827]">
+      <header className="relative min-h-[440px] overflow-hidden bg-[#09122f] md:min-h-[500px]">
         <img
           src="https://images.unsplash.com/photo-1600607688969-a5bfcd646154?q=80&w=1800&auto=format&fit=crop"
           alt="Premium residential property"
@@ -322,19 +346,28 @@ function Properties() {
           <nav className="flex items-center justify-between gap-4">
             <Link
               to="/"
-              className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:border-[#d6a77a] hover:text-[#d6a77a]"
+              className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:border-[#bfdbfe] hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
               Back Home
             </Link>
 
-            <p className="text-lg font-black tracking-wider text-white">
-              ZONAL REALTY
-            </p>
+            <div className="flex items-center gap-3">
+              {canManageProperties && (
+                <button type="button" onClick={() => setShowAddProperty(true)} className="inline-flex items-center gap-2 rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-bold text-white">
+                  <Plus className="h-4 w-4" /> Add Property
+                </button>
+              )}
+              <img
+                src="/zonal-realty-logo.png"
+                alt="Zonal Realty"
+                className="h-10 w-auto max-w-[150px] object-contain brightness-0 invert md:h-11 md:max-w-[170px]"
+              />
+            </div>
           </nav>
 
           <section className="flex flex-1 flex-col justify-center pb-20 pt-14 md:pb-28">
-            <p className="inline-flex w-fit items-center gap-2 rounded-full bg-[#d6a77a] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-black md:text-xs md:tracking-[0.25em]">
+            <p className="inline-flex w-fit items-center gap-2 rounded-full bg-[#bfdbfe] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-black md:text-xs md:tracking-[0.25em]">
               <Building2 className="h-4 w-4" />
               Property Directory Demo
             </p>
@@ -351,19 +384,19 @@ function Properties() {
       <section className="mx-auto max-w-[1500px] px-6 pb-16 md:px-10">
         <div className="relative z-10 -mt-14 grid gap-3 rounded-[24px] bg-white p-4 shadow-2xl md:grid-cols-2 lg:grid-cols-[1fr_190px_190px_130px]">
           <label className="relative block">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#a56b3f]" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#111827]" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by location, name, or type"
-              className="h-[52px] w-full rounded-2xl border border-[#eadccd] bg-[#fbf8f3] pl-12 pr-4 text-sm font-semibold text-[#2d1f18] outline-none transition placeholder:text-[#8d7b6c] focus:border-[#d6a77a] md:text-base"
+              className="h-[52px] w-full rounded-2xl border border-[#dbe4f0] bg-[#f8fafc] pl-12 pr-4 text-sm font-semibold text-[#111827] outline-none transition placeholder:text-[#64748b] focus:border-[#bfdbfe] md:text-base"
             />
           </label>
 
           <select
             value={type}
             onChange={(event) => setType(event.target.value)}
-            className="h-[52px] rounded-2xl border border-[#eadccd] bg-[#fbf8f3] px-4 text-sm font-semibold text-[#2d1f18] outline-none transition focus:border-[#d6a77a] md:text-base"
+            className="h-[52px] rounded-2xl border border-[#dbe4f0] bg-[#f8fafc] px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#bfdbfe] md:text-base"
           >
             {typeOptions.map((option) => (
               <option key={option}>{option}</option>
@@ -373,14 +406,14 @@ function Properties() {
           <select
             value={budget}
             onChange={(event) => setBudget(event.target.value)}
-            className="h-[52px] rounded-2xl border border-[#eadccd] bg-[#fbf8f3] px-4 text-sm font-semibold text-[#2d1f18] outline-none transition focus:border-[#d6a77a] md:text-base"
+            className="h-[52px] rounded-2xl border border-[#dbe4f0] bg-[#f8fafc] px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#bfdbfe] md:text-base"
           >
             {budgetOptions.map((option) => (
               <option key={option}>{option}</option>
             ))}
           </select>
 
-          <div className="flex h-[52px] items-center justify-center gap-2 rounded-2xl bg-[#2d1f18] px-5 text-sm font-bold text-white md:col-span-2 lg:col-span-1">
+          <div className="flex h-[52px] items-center justify-center gap-2 rounded-2xl bg-[#0d1b4c] px-5 text-sm font-bold text-white md:col-span-2 lg:col-span-1">
             <SlidersHorizontal className="h-4 w-4" />
             {filteredProperties.length} Found
           </div>
@@ -399,9 +432,11 @@ function Properties() {
                   className="h-full w-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                <span className="absolute left-4 top-4 max-w-[calc(100%-2rem)] rounded-full bg-[#d6a77a] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-black">
-                  {property.status}
-                </span>
+                {property.isNewListing && (
+                  <span className="absolute left-4 top-4 max-w-[calc(100%-2rem)] rounded-full bg-[#bfdbfe] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-black">
+                    New Listing
+                  </span>
+                )}
                 <div className="absolute bottom-4 left-4 right-4">
                   <p className="flex items-center gap-1.5 text-xs font-semibold text-white/85">
                     <MapPin className="h-3.5 w-3.5" />
@@ -416,28 +451,34 @@ function Properties() {
               <div className="flex flex-1 flex-col p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a56b3f]">
-                      {property.type}
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#111827]">
+                      {property.propertyTypes.length} {property.propertyTypes.length === 1 ? 'Property Type' : 'Property Types'}
                     </p>
-                    <p className="mt-1 text-2xl font-black text-[#d2a06b]">
+                    <p className="mt-1 text-2xl font-black text-[#111827]">
                       {formatPrice(property)}
                     </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => openInquiry(property)}
-                    className="shrink-0 rounded-xl bg-[#2d1f18] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#3f2c22]"
+                    onClick={() => setSelectedProject(property)}
+                    className="shrink-0 rounded-xl bg-[#0d1b4c] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#09122f]"
                   >
-                    Inquire
+                    View Types
                   </button>
                 </div>
 
-                <div className="mt-5 grid grid-cols-4 gap-2">
-                  <PropertyStat icon={BedDouble} label="Beds" value={property.beds} />
-                  <PropertyStat icon={Bath} label="Baths" value={property.baths} />
-                  <PropertyStat icon={Car} label="Parking" value={property.parking} />
-                  <PropertyStat icon={Ruler} label="Area" value={property.floorArea} />
+                <div className="mt-5">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-gray-400">
+                    Available property types
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {property.propertyTypes.map((propertyType) => (
+                      <span key={propertyType} className="rounded-full border border-[#dbe4f0] bg-[#f8fafc] px-2.5 py-1 text-[10px] font-bold text-[#111827]">
+                        {propertyType}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             </article>
@@ -454,21 +495,67 @@ function Properties() {
         )}
       </section>
 
-      {inquiry && (
+      {selectedProject && (
         <InquiryModal
-          inquiry={inquiry}
-          onClose={() => setInquiry(null)}
+          project={selectedProject}
+          onClose={() => setSelectedProject(null)}
+        />
+      )}
+
+      {showAddProperty && canManageProperties && (
+        <AddPropertyModal
+          form={propertyForm}
+          saving={savingProperty}
+          onChange={(name, value) => setPropertyForm((current) => ({ ...current, [name]: value }))}
+          onClose={() => setShowAddProperty(false)}
+          onSave={saveProperty}
         />
       )}
     </main>
   )
 }
 
+function AddPropertyModal({ form, saving, onChange, onClose, onSave }) {
+  const fields = [
+    ['title', 'Property Title'], ['location', 'Location'], ['type', 'Property Type'],
+    ['priceFrom', 'Price From (PHP)', 'number'], ['priceTo', 'Price To (PHP)', 'number'], ['image', 'Image URL'],
+    ['beds', 'Bedrooms', 'number'], ['baths', 'Bathrooms', 'number'],
+    ['parking', 'Parking', 'number'], ['floorArea', 'Floor Area'], ['status', 'Status'],
+  ]
+
+  return (
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/70 p-5 backdrop-blur-sm">
+      <div className="mx-auto max-w-3xl rounded-3xl bg-white p-7 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <div><h2 className="text-2xl font-black">Add Property</h2><p className="text-sm text-gray-500">Administrator and EVP access only</p></div>
+          <button type="button" onClick={onClose} className="rounded-full bg-gray-100 p-3"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          {fields.map(([name, label, type = 'text']) => (
+            <label key={name} className={name === 'image' ? 'md:col-span-2' : ''}>
+              <span className="mb-2 block text-sm font-bold text-gray-600">{label}</span>
+              <input type={type} min={type === 'number' ? '0' : undefined} step="1" value={form[name]} onChange={(event) => onChange(name, event.target.value)} className="h-12 w-full rounded-xl border border-gray-300 px-4 outline-none focus:ring-2 focus:ring-[#2563eb]" />
+            </label>
+          ))}
+        </div>
+        <div className="mt-7 flex justify-end gap-3">
+          <button type="button" onClick={onClose} className="rounded-xl bg-gray-100 px-5 py-3 font-bold">Cancel</button>
+          <button type="button" disabled={saving} onClick={onSave} className="rounded-xl bg-[#2563eb] px-6 py-3 font-bold text-white disabled:opacity-60">{saving ? 'Saving...' : 'Save Property'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function getInitialPropertyForm() {
+  return { title: '', location: '', type: '', priceFrom: '', priceTo: '', image: '', beds: '', baths: '', parking: '', floorArea: '', status: 'New Listing' }
+}
+
 function PropertyStat({ icon: Icon, label, value }) {
   return (
-    <div className="flex min-h-[70px] flex-col items-center justify-center rounded-xl bg-[#fbf8f3] px-1 py-2 text-center">
-      <Icon className="mx-auto h-3.5 w-3.5 text-[#a56b3f]" />
-      <p className="mt-1.5 whitespace-nowrap text-[11px] font-black leading-tight text-[#2d1f18]">
+    <div className="flex min-h-[70px] flex-col items-center justify-center rounded-xl bg-[#f8fafc] px-1 py-2 text-center">
+      <Icon className="mx-auto h-3.5 w-3.5 text-[#111827]" />
+      <p className="mt-1.5 whitespace-nowrap text-[11px] font-black leading-tight text-[#111827]">
         {value}
       </p>
       <p className="mt-1 text-[8px] font-bold uppercase leading-tight tracking-wide text-gray-400">
@@ -478,123 +565,168 @@ function PropertyStat({ icon: Icon, label, value }) {
   )
 }
 
-function InquiryModal({ inquiry, onClose }) {
+function InquiryModal({ project, onClose }) {
+  const [property, setProperty] = useState(project.variants[0])
+  const [assignedAgents, setAssignedAgents] = useState([])
+  const [loadingAgents, setLoadingAgents] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    setLoadingAgents(true)
+
+    propertyApi.assignedAgents(property.id)
+      .then((records) => {
+        if (active) setAssignedAgents(records)
+      })
+      .catch((error) => {
+        console.error(error)
+        if (active) setAssignedAgents(agents.slice(0, 0))
+      })
+      .finally(() => {
+        if (active) setLoadingAgents(false)
+      })
+
+    return () => { active = false }
+  }, [property.id])
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 px-4 py-6 backdrop-blur-sm">
-      <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-[24px] bg-[#fbf8f3] shadow-2xl">
+      <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-[24px] bg-[#f8fafc] shadow-2xl">
         <div className="relative">
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 z-10 rounded-full bg-white p-3 text-[#2d1f18] shadow-lg transition hover:bg-[#f4eadf]"
+            className="absolute right-4 top-4 z-10 rounded-full bg-white p-3 text-[#111827] shadow-lg transition hover:bg-[#eef4ff]"
             aria-label="Close inquiry"
           >
             <X className="h-5 w-5" />
           </button>
 
           <div className="grid gap-0 lg:grid-cols-[0.85fr_1.15fr]">
-            <div className="relative min-h-[320px] overflow-hidden bg-[#2d1f18]">
+            <div className="relative min-h-[320px] overflow-hidden bg-[#0d1b4c]">
               <img
-                src={inquiry.property.image}
-                alt={inquiry.property.title}
+                src={property.image}
+                alt={property.title}
                 className="absolute inset-0 h-full w-full object-cover opacity-55"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/20" />
               <div className="relative flex min-h-[320px] flex-col justify-end p-6 text-white md:p-8">
-                <p className="w-fit rounded-full bg-[#d6a77a] px-4 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-black">
-                  {inquiry.property.type}
+                <p className="w-fit rounded-full bg-[#bfdbfe] px-4 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-black">
+                  {property.type}
                 </p>
                 <h2 className="mt-5 text-4xl font-black leading-tight">
-                  {inquiry.property.title}
+                  {property.title}
                 </h2>
                 <p className="mt-3 flex items-center gap-2 text-white/80">
                   <MapPin className="h-4 w-4" />
-                  {inquiry.property.location}
+                  {property.location}
                 </p>
-                <p className="mt-4 text-4xl font-black text-[#d6a77a]">
-                  {formatPrice(inquiry.property)}
+                <p className="mt-4 text-4xl font-black text-white">
+                  {formatPrice(property)}
                 </p>
               </div>
             </div>
 
             <div className="p-6 md:p-8">
-              <div className="border-b border-[#e7d8c6] pb-5">
+              <div className="mb-6">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#111827]">
+                  Choose Property Type
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {project.variants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      onClick={() => setProperty(variant)}
+                      className={`rounded-xl border px-4 py-2.5 text-sm font-bold transition ${
+                        property.id === variant.id
+                          ? 'border-[#0d1b4c] bg-[#0d1b4c] text-white'
+                          : 'border-[#dbe4f0] bg-white text-[#111827] hover:border-[#d6b56d]'
+                      }`}
+                    >
+                      {variant.type || 'Property Type'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-b border-[#dbe4f0] pb-5">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#a56b3f]">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#111827]">
                     Available Agents
                   </p>
-                  <h3 className="mt-2 text-3xl font-black text-[#2d1f18]">
+                  <h3 className="mt-2 text-3xl font-black text-[#111827]">
                     Contact seller for this property
                   </h3>
                 </div>
               </div>
 
               <div className="mt-6 grid gap-4 md:grid-cols-2">
-                {inquiry.agents.map((agent) => (
+                {loadingAgents && (
+                  <div className="rounded-[20px] border border-dashed border-[#dbe4f0] bg-white p-8 text-center text-gray-500 md:col-span-2">Loading assigned agents...</div>
+                )}
+                {!loadingAgents && assignedAgents.length === 0 && (
+                  <div className="rounded-[20px] border border-dashed border-[#dbe4f0] bg-white p-8 text-center text-gray-500 md:col-span-2">
+                    No assigned agents for this property yet.
+                  </div>
+                )}
+                {assignedAgents.map((agent) => (
                   <article
                     key={agent.id}
-                    className="rounded-[20px] border border-[#eadccd] bg-white p-4 shadow-sm"
+                    className="rounded-[20px] border border-[#dbe4f0] bg-white p-4 shadow-sm"
                   >
                     <div className="flex gap-4">
-                      <img
-                        src={agent.image}
-                        alt={agent.name}
-                        className="h-16 w-16 rounded-2xl object-cover"
-                      />
+                      {agent.image ? <img src={agent.image} alt={agent.name} className="h-16 w-16 rounded-2xl object-cover" /> : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#0d1b4c] text-xl font-black text-white">{String(agent.name || 'A').charAt(0)}</div>}
 
                       <div className="min-w-0">
-                        <h4 className="text-lg font-black text-[#2d1f18]">
+                        <h4 className="text-lg font-black text-[#111827]">
                           {agent.name}
                         </h4>
                         <p className="text-sm font-semibold text-gray-500">
                           {agent.role}
                         </p>
-                        <p className="mt-1 text-xs font-bold text-[#a56b3f]">
+                        <p className="mt-1 text-xs font-bold text-[#111827]">
                           {agent.area}
                         </p>
                       </div>
                     </div>
 
-                    <div className="mt-4 space-y-2 rounded-2xl bg-[#fbf8f3] p-3 text-sm font-semibold text-[#2d1f18]">
+                    <div className="mt-4 space-y-2 rounded-2xl bg-[#f8fafc] p-3 text-sm font-semibold text-[#111827]">
                       <p className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-[#a56b3f]" />
-                        {agent.phone}
+                        <Phone className="h-4 w-4 text-[#111827]" />
+                        {agent.phone || 'No mobile number'}
                       </p>
                       <p className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-[#a56b3f]" />
-                        {agent.email}
+                        <Mail className="h-4 w-4 text-[#111827]" />
+                        {agent.email || 'No email'}
                       </p>
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-2">
                       <a
-                        href={`tel:${agent.phone.replaceAll(' ', '')}`}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2d1f18] px-3 py-3 text-xs font-bold text-white transition hover:bg-[#3f2c22]"
+                        href={`tel:${String(agent.phone || '').replaceAll(' ', '')}`}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0d1b4c] px-3 py-3 text-xs font-bold text-white transition hover:bg-[#09122f]"
                       >
                         <Phone className="h-4 w-4" />
                         Call
                       </a>
                       <a
-                        href={`sms:${agent.phone.replaceAll(' ', '')}?body=Hi ${agent.name}, I am interested in ${inquiry.property.title}.`}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#d6a77a] px-3 py-3 text-xs font-bold text-black transition hover:bg-[#c7955f]"
+                        href={`sms:${String(agent.phone || '').replaceAll(' ', '')}?body=Hi ${agent.name}, I am interested in ${property.title} - ${property.type}.`}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#bfdbfe] px-3 py-3 text-xs font-bold text-black transition hover:bg-[#1d4ed8]"
                       >
                         <MessageCircle className="h-4 w-4" />
                         SMS
                       </a>
                       <a
-                        href={`mailto:${agent.email}?subject=Inquiry for ${inquiry.property.title}`}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d6a77a] px-3 py-3 text-xs font-bold text-[#2d1f18] transition hover:bg-[#f8f3ed]"
+                        href={`mailto:${agent.email}?subject=Inquiry for ${property.title} - ${property.type}`}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#bfdbfe] px-3 py-3 text-xs font-bold text-[#111827] transition hover:bg-[#eef4ff]"
                       >
                         <Mail className="h-4 w-4" />
                         Email
                       </a>
                     </div>
 
-                    <div className="mt-3 flex gap-2">
-                      <SocialLink href={agent.socials.facebook}>FB</SocialLink>
-                      <SocialLink href={agent.socials.instagram}>IG</SocialLink>
-                      <SocialLink href={agent.socials.linkedin}>IN</SocialLink>
-                    </div>
+                    <AgentSocialLinks socials={agent.socials} compact />
                   </article>
                 ))}
               </div>
@@ -606,25 +738,8 @@ function InquiryModal({ inquiry, onClose }) {
   )
 }
 
-function SocialLink({ href, children }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="flex h-10 flex-1 items-center justify-center rounded-xl bg-[#f4eadf] text-xs font-black text-[#2d1f18] transition hover:bg-[#d6a77a]"
-    >
-      {children}
-    </a>
-  )
-}
-
-function shuffleItems(items) {
-  return [...items].sort(() => Math.random() - 0.5)
-}
-
 function formatPrice(property) {
-  return `${peso}${property.priceValue.toFixed(1)}M`
+  return formatPropertyPrice(property)
 }
 
 export default Properties
