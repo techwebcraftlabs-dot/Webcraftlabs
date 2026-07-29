@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 
-import { query } from "../_lib/db.js";
+import { ensureColumn, query } from "../_lib/db.js";
 import { agentColumnMap, agentFields, agentSelect, pickAgentPayload } from "../_lib/agents.js";
 import { handleError, readJson, sendJson } from "../_lib/http.js";
 import { requireSession } from "../_lib/auth.js";
@@ -12,9 +12,9 @@ import { ensureTeamsTable } from "../_lib/teams.js";
 export default async function handler(req, res) {
   try {
     const session = await requireSession(req, { roles: ["Administrator", "EVP"] });
-    await query(`ALTER TABLE agents ADD COLUMN IF NOT EXISTS zonal_tax_rate DECIMAL(5, 2) NOT NULL DEFAULT 5.00`);
-    await query(`ALTER TABLE agents ADD COLUMN IF NOT EXISTS bdo_account_number VARCHAR(100) NULL AFTER mobile_number`);
-    await query(`ALTER TABLE agents ADD COLUMN IF NOT EXISTS sub_team VARCHAR(150) NULL AFTER team`);
+    await ensureColumn("agents", "zonal_tax_rate", "DECIMAL(5, 2) NOT NULL DEFAULT 5.00");
+    await ensureColumn("agents", "bdo_account_number", "VARCHAR(100) NULL AFTER mobile_number");
+    await ensureColumn("agents", "sub_team", "VARCHAR(150) NULL AFTER team");
     await ensureTeamsTable();
     if (req.method === "GET") {
       const agents = await query(

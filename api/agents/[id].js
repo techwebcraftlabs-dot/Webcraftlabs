@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 
-import { query } from "../_lib/db.js";
+import { ensureColumn, query } from "../_lib/db.js";
 import { agentColumnMap, agentSelect, pickAgentPayload } from "../_lib/agents.js";
 import { handleError, readJson, sendJson } from "../_lib/http.js";
 import { requireSession } from "../_lib/auth.js";
@@ -10,8 +10,8 @@ export default async function handler(req, res) {
 
   try {
     const session = await requireSession(req, { selfId: id });
-    await query(`ALTER TABLE agents ADD COLUMN IF NOT EXISTS zonal_tax_rate DECIMAL(5, 2) NOT NULL DEFAULT 5.00`);
-    await query(`ALTER TABLE agents ADD COLUMN IF NOT EXISTS bdo_account_number VARCHAR(100) NULL AFTER mobile_number`);
+    await ensureColumn("agents", "zonal_tax_rate", "DECIMAL(5, 2) NOT NULL DEFAULT 5.00");
+    await ensureColumn("agents", "bdo_account_number", "VARCHAR(100) NULL AFTER mobile_number");
     if (req.method === "GET") {
       const rows = await query(
         `SELECT ${agentSelect}

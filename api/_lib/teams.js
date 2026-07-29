@@ -1,4 +1,4 @@
-import { query } from './db.js'
+import { ensureColumn, query } from './db.js'
 
 export async function ensureTeamsTable() {
   await query(`CREATE TABLE IF NOT EXISTS teams (
@@ -13,8 +13,8 @@ export async function ensureTeamsTable() {
     KEY teams_evp_agent_index (evp_agent_id),
     CONSTRAINT teams_evp_agent_foreign FOREIGN KEY (evp_agent_id) REFERENCES agents(id) ON DELETE SET NULL
   )`)
-  await query(`ALTER TABLE teams ADD COLUMN IF NOT EXISTS established_date DATE NULL AFTER evp_agent_id`)
-  await query(`ALTER TABLE agents ADD COLUMN IF NOT EXISTS sub_team VARCHAR(150) NULL AFTER team`)
+  await ensureColumn('teams', 'established_date', 'DATE NULL AFTER evp_agent_id')
+  await ensureColumn('agents', 'sub_team', 'VARCHAR(150) NULL AFTER team')
   await query(`CREATE TABLE IF NOT EXISTS team_subteams (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     team_id BIGINT UNSIGNED NOT NULL,

@@ -1,4 +1,4 @@
-import { query } from '../_lib/db.js'
+import { ensureColumn, query } from '../_lib/db.js'
 import { requireSession } from '../_lib/auth.js'
 import { handleError, sendJson } from '../_lib/http.js'
 
@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   try {
     await requireSession(req, { roles: ['Administrator', 'HLC', 'EVP'] })
     if (req.method !== 'GET') return sendJson(res, 405, { error: 'Method not allowed.' })
-    await query(`ALTER TABLE agents ADD COLUMN IF NOT EXISTS zonal_tax_rate DECIMAL(5, 2) NOT NULL DEFAULT 5.00`)
+    await ensureColumn('agents', 'zonal_tax_rate', 'DECIMAL(5, 2) NOT NULL DEFAULT 5.00')
     const rows = await query(`SELECT id,
       TRIM(CONCAT_WS(' ', first_name, NULLIF(middle_name, ''), last_name)) AS fullName,
       TRIM(CONCAT_WS(' ', first_name, last_name)) AS simpleName,
