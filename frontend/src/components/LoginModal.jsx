@@ -139,7 +139,7 @@ function LoginModal({ onClose }) {
           <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#d6b56d]/35 bg-[#071a3d]/50 px-4 py-2 text-xs font-semibold backdrop-blur">
               <Sparkles size={15} className="text-[#e1bd70]" />
-              Zonal command access
+              Webcraft command access
             </div>
 
             <h2 className="text-[42px] font-black leading-[0.98] tracking-tight">
@@ -157,8 +157,8 @@ function LoginModal({ onClose }) {
         <div className="bg-[#faf9f6] p-5 pt-16 sm:p-8 sm:pt-16 lg:p-9">
           <div className="mb-6">
             <img
-              src="/zonal-realty-logo.png"
-              alt="Zonal Realty"
+              src="/webcraft-logo-transparent.png"
+              alt="Webcraft Labs"
               className="mb-5 h-9 w-auto object-contain object-left lg:hidden"
             />
             <div
@@ -183,7 +183,7 @@ function LoginModal({ onClose }) {
             </h1>
 
             <p className="mt-2 text-sm text-slate-500">
-              Access your Zonal Realty dashboard.
+              Access your Webcraft Labs dashboard.
             </p>
           </div>
 
@@ -201,7 +201,7 @@ function LoginModal({ onClose }) {
 
                 <input
                   type="email"
-                  placeholder="name@zonalrealty.com"
+                  placeholder="admin@webcraft.labs"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-transparent text-[#111827] outline-none placeholder:text-gray-400"

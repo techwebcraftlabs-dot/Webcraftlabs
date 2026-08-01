@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import { agentApi, ayudaApi } from "../lib/api";
@@ -120,7 +120,7 @@ function AgentDetails() {
       const loans = await ayudaApi.list(id);
       setAyudaLoans(loans.filter((loan) => String(loan.agentId) === String(id)));
       setLoanForm({ originalAmount: "", releasedDate: new Date().toISOString().slice(0, 10), notes: "" });
-      alert("Ayuda loan added successfully.");
+      alert("Loan added successfully.");
     } catch (error) { alert(error.message); }
     finally { setSavingLoan(false); }
   };
@@ -217,7 +217,7 @@ function AgentDetails() {
           onClick={returnToAgents}
           className="w-12 h-12 rounded-xl bg-gray-100"
         >
-          ←
+          â†
         </button>
 
         <div>
@@ -466,7 +466,7 @@ function AgentDetails() {
         </div>
 
         <Input
-          label="Zonal Tax Rate (%)"
+          label="Platform Tax Rate (%)"
           name="zonalTaxRate"
           type="number"
           min="0"
@@ -487,7 +487,7 @@ function AgentDetails() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
 
         <Input
-          label="Zonal Email"
+          label="Platform Email"
           name="zonalEmail"
           value={formData.zonalEmail}
           onChange={handleChange}
@@ -548,9 +548,9 @@ function AgentDetails() {
       </div>
 
       <section className="admin-ayuda-section mt-10 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
-        <div className="flex flex-col gap-3 border-b border-slate-100 bg-gradient-to-r from-[#0d1b4c] to-[#1d4ed8] px-6 py-5 text-white sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">Ayuda / Loans</p><h3 className="mt-1 text-xl font-black">Loan account and payment ledger</h3></div><p className="max-w-md text-sm text-blue-100">Create loans and monitor deductions posted from released commissions.</p></div>
-        <div className="ayuda-loan-form m-5 rounded-2xl border border-blue-100 bg-blue-50/50 p-5"><div className="mb-4"><p className="text-sm font-black text-slate-900">Add a new Ayuda loan</p><p className="mt-1 text-xs text-slate-500">Enter the principal amount and release information. Commission deductions remain manual.</p></div><div className="grid gap-4 md:grid-cols-3"><Input label="Loan Amount" name="originalAmount" type="number" min="0" step="0.01" value={loanForm.originalAmount} onChange={(event) => setLoanForm((current) => ({ ...current, originalAmount: event.target.value }))} /><Input label="Date Released" name="releasedDate" type="date" value={loanForm.releasedDate} onChange={(event) => setLoanForm((current) => ({ ...current, releasedDate: event.target.value }))} /><Input label="Notes" name="notes" value={loanForm.notes} onChange={(event) => setLoanForm((current) => ({ ...current, notes: event.target.value }))} /></div><div className="mt-4 flex justify-end"><button disabled={savingLoan} onClick={handleAddLoan} className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:opacity-60">{savingLoan ? "Adding Loan..." : "Add Ayuda Loan"}</button></div></div>
-        {ayudaLoans.length > 0 && <div className="mt-6 space-y-5">{ayudaLoans.map((loan) => <div key={loan.id} className="overflow-hidden rounded-2xl border border-slate-100 bg-white"><div className="responsive-table-wrap"><table className="w-full min-w-[600px]"><thead className="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th className="p-4">Released</th><th className="p-4">Original</th><th className="p-4">Paid</th><th className="p-4">Remaining Balance</th><th className="p-4">Status</th></tr></thead><tbody><tr className="border-t"><td className="p-4">{loan.releasedDate}</td><td className="p-4 font-bold">₱{loan.originalAmount.toLocaleString()}</td><td className="p-4 font-bold text-emerald-600">₱{loan.totalPaid.toLocaleString()}</td><td className="p-4 font-black text-red-600">₱{loan.remainingBalance.toLocaleString()}</td><td className="p-4"><span className={`rounded-full px-3 py-1 text-xs font-bold ${loan.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>{loan.status}</span></td></tr></tbody></table></div>{loan.payments?.length > 0 ? <div className="border-t border-slate-100 p-5"><div className="mb-3"><p className="text-xs font-black uppercase tracking-widest text-blue-600">Payment History</p><p className="mt-1 text-sm text-slate-500">Ayuda deductions recorded from saved commission computations.</p></div><div className="responsive-table-wrap"><table className="w-full min-w-[650px]"><thead className="text-left text-xs uppercase text-slate-400"><tr><th className="p-3">Payment Date</th><th className="p-3">Buyer / Voucher</th><th className="p-3">Description</th><th className="p-3 text-right">Amount Paid</th><th className="p-3 text-right">Balance After</th></tr></thead><tbody>{buildLoanPaymentRows(loan).map((payment) => <tr key={payment.id} className="border-t border-slate-100"><td className="p-3">{new Date(payment.paidAt).toLocaleDateString()}</td><td className="p-3 font-semibold text-blue-700">{formatAyudaPaymentReference(payment)}</td><td className="p-3 text-slate-500">{payment.notes || 'Commission deduction'}</td><td className="p-3 text-right font-bold text-emerald-600">₱{payment.amount.toLocaleString()}</td><td className="p-3 text-right font-black text-slate-900">₱{payment.balanceAfter.toLocaleString()}</td></tr>)}</tbody></table></div></div> : <div className="border-t border-slate-100 px-5 py-4 text-sm text-slate-400">No Ayuda payments recorded yet. A record will appear after a commission computation with an Ayuda deduction is saved.</div>}</div>)}</div>}
+        <div className="flex flex-col gap-3 border-b border-slate-100 bg-gradient-to-r from-[#0d1b4c] to-[#1d4ed8] px-6 py-5 text-white sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">Loans</p><h3 className="mt-1 text-xl font-black">Loan account and payment ledger</h3></div><p className="max-w-md text-sm text-blue-100">Create loans and monitor deductions posted from released commissions.</p></div>
+        <div className="ayuda-loan-form m-5 rounded-2xl border border-blue-100 bg-blue-50/50 p-5"><div className="mb-4"><p className="text-sm font-black text-slate-900">Add a new loan</p><p className="mt-1 text-xs text-slate-500">Enter the principal amount and release information. Commission deductions remain manual.</p></div><div className="grid gap-4 md:grid-cols-3"><Input label="Loan Amount" name="originalAmount" type="number" min="0" step="0.01" value={loanForm.originalAmount} onChange={(event) => setLoanForm((current) => ({ ...current, originalAmount: event.target.value }))} /><Input label="Date Released" name="releasedDate" type="date" value={loanForm.releasedDate} onChange={(event) => setLoanForm((current) => ({ ...current, releasedDate: event.target.value }))} /><Input label="Notes" name="notes" value={loanForm.notes} onChange={(event) => setLoanForm((current) => ({ ...current, notes: event.target.value }))} /></div><div className="mt-4 flex justify-end"><button disabled={savingLoan} onClick={handleAddLoan} className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:opacity-60">{savingLoan ? "Adding Loan..." : "Add Loan"}</button></div></div>
+        {ayudaLoans.length > 0 && <div className="mt-6 space-y-5">{ayudaLoans.map((loan) => <div key={loan.id} className="overflow-hidden rounded-2xl border border-slate-100 bg-white"><div className="responsive-table-wrap"><table className="w-full min-w-[600px]"><thead className="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th className="p-4">Released</th><th className="p-4">Original</th><th className="p-4">Paid</th><th className="p-4">Remaining Balance</th><th className="p-4">Status</th></tr></thead><tbody><tr className="border-t"><td className="p-4">{loan.releasedDate}</td><td className="p-4 font-bold">â‚±{loan.originalAmount.toLocaleString()}</td><td className="p-4 font-bold text-emerald-600">â‚±{loan.totalPaid.toLocaleString()}</td><td className="p-4 font-black text-red-600">â‚±{loan.remainingBalance.toLocaleString()}</td><td className="p-4"><span className={`rounded-full px-3 py-1 text-xs font-bold ${loan.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>{loan.status}</span></td></tr></tbody></table></div>{loan.payments?.length > 0 ? <div className="border-t border-slate-100 p-5"><div className="mb-3"><p className="text-xs font-black uppercase tracking-widest text-blue-600">Payment History</p><p className="mt-1 text-sm text-slate-500">Loan deductions recorded from saved commission computations.</p></div><div className="responsive-table-wrap"><table className="w-full min-w-[650px]"><thead className="text-left text-xs uppercase text-slate-400"><tr><th className="p-3">Payment Date</th><th className="p-3">Buyer / Voucher</th><th className="p-3">Description</th><th className="p-3 text-right">Amount Paid</th><th className="p-3 text-right">Balance After</th></tr></thead><tbody>{buildLoanPaymentRows(loan).map((payment) => <tr key={payment.id} className="border-t border-slate-100"><td className="p-3">{new Date(payment.paidAt).toLocaleDateString()}</td><td className="p-3 font-semibold text-blue-700">{formatAyudaPaymentReference(payment)}</td><td className="p-3 text-slate-500">{payment.notes || 'Commission deduction'}</td><td className="p-3 text-right font-bold text-emerald-600">â‚±{payment.amount.toLocaleString()}</td><td className="p-3 text-right font-black text-slate-900">â‚±{payment.balanceAfter.toLocaleString()}</td></tr>)}</tbody></table></div></div> : <div className="border-t border-slate-100 px-5 py-4 text-sm text-slate-400">No loan payments recorded yet. A record will appear after a commission computation with a loan deduction is saved.</div>}</div>)}</div>}
       </section>
 
       <div className="flex justify-end gap-4 mt-10">
@@ -672,8 +672,8 @@ function buildLoanPaymentRows(loan) {
 function formatAyudaPaymentReference(payment) {
   const buyer = payment.buyer || "Buyer";
   const voucher = payment.voucherNo && payment.voucherNo !== "null" ? payment.voucherNo : "";
-  if (voucher) return `${buyer} — Voucher ${voucher}`;
-  return payment.computationId ? `${buyer} — Computation #${payment.computationId}` : "Manual payment";
+  if (voucher) return `${buyer} â€” Voucher ${voucher}`;
+  return payment.computationId ? `${buyer} â€” Computation #${payment.computationId}` : "Manual payment";
 }
 
 function formatPasswordChangedAt(value) {
@@ -687,3 +687,4 @@ function formatPasswordChangedAt(value) {
     timeStyle: "short",
   }).format(date);
 }
+

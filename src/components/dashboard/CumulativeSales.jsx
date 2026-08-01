@@ -133,7 +133,7 @@ function CumulativeSales({ filters }) {
                     <span className="whitespace-nowrap text-xs text-[#64748b]">{developer.units} units</span>
                   </div>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#eef2f7]">
-                    <div className="h-full rounded-full bg-gradient-to-r from-[#1d4ed8] to-[#60a5fa]" style={{ width: `${width}%` }} />
+                    <div className="h-full rounded-full bg-gradient-to-r from-[#8b6226] to-[#d1a14d]" style={{ width: `${width}%` }} />
                   </div>
                 </div>
                 <p className="whitespace-nowrap font-black text-[#111827]">{formatSales(developer.salesValue)}</p>

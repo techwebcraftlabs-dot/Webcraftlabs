@@ -49,8 +49,8 @@ CREATE TABLE IF NOT EXISTS admin_accounts (
 
 INSERT INTO admin_accounts (email, password_hash, display_name)
 VALUES (
-  'admin@zonal.com',
-  '$2b$12$3rd/rMSnizF598q9zaaqu..yXxX6o7q1ZVlMcP5MuO559f4iJNgEK',
+  'admin@webcraft.labs',
+  '$2b$12$06mkbipnrVCmPmpXupRYdObJCAH.nngotX8lAHtm7my6ncq1ra0nq',
   'Administrator'
 )
 ON DUPLICATE KEY UPDATE email = VALUES(email);

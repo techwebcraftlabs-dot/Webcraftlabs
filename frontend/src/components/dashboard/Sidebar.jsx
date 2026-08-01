@@ -257,7 +257,7 @@ function Sidebar({
 
   }
 
-  const roleMenus = role === 'Administrator' ? (menus[role] || menus.Agent) : [...(menus[role] || menus.Agent), { key: 'my-ayuda', label: 'My Ayuda', icon: HandCoins }]
+  const roleMenus = role === 'Administrator' ? (menus[role] || menus.Agent) : [...(menus[role] || menus.Agent), { key: 'my-ayuda', label: 'My Loans', icon: HandCoins }]
   const currentMenus =
     [...(mustChangePassword
       ? roleMenus.filter((item) => item.key === 'profile')
@@ -272,9 +272,9 @@ function Sidebar({
       className="dashboard-sidebar
         w-[248px]
         h-full
-        bg-[#fffefd]
+        bg-[#f8f5ef]
         border-r
-        border-[#e5ebf3]
+        border-[#ded8cd]
         px-4
         py-6
         flex
@@ -285,11 +285,11 @@ function Sidebar({
 
       <div>
 
-        <div className="mb-7 flex h-14 items-center justify-center">
+        <div className="mb-7 flex h-16 items-center justify-center px-3">
           <img
-            src="/zonal-realty-logo.png"
-            alt="Zonal Realty"
-            className="h-12 w-auto max-w-[170px] object-contain object-center"
+            src="/webcraft-logo-cutout.png"
+            alt="Webcraft Labs"
+            className="dashboard-brand-logo h-12 w-full object-contain object-center"
           />
         </div>
 
@@ -318,15 +318,15 @@ function Sidebar({
                   ${
                     activePage === item.key
                       ? `
-                        bg-[#071a3d]
+                        bg-[#1b1d1f]
                         text-white
-                        shadow-[0_10px_24px_rgba(7,26,61,0.18)]
-                        ring-1 ring-[#c9a96e]/40
+                        shadow-[0_10px_24px_rgba(27,29,31,0.16)]
+                        ring-1 ring-[#b88936]/45
                       `
                       : `
-                        text-[#526071]
-                        hover:bg-white
-                        hover:text-[#111827]
+                        text-[#5f625f]
+                        hover:bg-[#eee8de]
+                        hover:text-[#1b1d1f]
                       `
                   }
                 `}

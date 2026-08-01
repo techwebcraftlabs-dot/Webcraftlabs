@@ -2,13 +2,20 @@
 
 :root {
   color-scheme: light;
-  --zonal-navy: #0d1b4c;
-  --zonal-navy-dark: #09122f;
-  --zonal-blue: #2563eb;
-  --zonal-blue-light: #bfdbfe;
-  --zonal-surface: #ffffff;
-  --zonal-background: #f4f7fb;
-  --zonal-border: #dbe4f0;
+  --brand-ink: #202225;
+  --brand-charcoal: #1b1d1f;
+  --brand-gold: #9a6c26;
+  --brand-gold-light: #d1a14d;
+  --brand-ivory: #f7f4ee;
+  --brand-surface: #fffdf9;
+  --brand-border: #ded8cd;
+  --zonal-navy: var(--brand-ink);
+  --zonal-navy-dark: var(--brand-charcoal);
+  --zonal-blue: var(--brand-gold);
+  --zonal-blue-light: #efe2ca;
+  --zonal-surface: var(--brand-surface);
+  --zonal-background: var(--brand-ivory);
+  --zonal-border: var(--brand-border);
 }
 
 html.dark {
@@ -67,8 +74,8 @@ body {
 }
 
 .dashboard-theme {
-  background: #f6f7f9;
-  color: #0d1b4c;
+  background: #f3efe8;
+  color: var(--brand-ink);
   transition: background-color 180ms ease, color 180ms ease;
 }
 
@@ -677,4 +684,213 @@ html.dark .dashboard-theme .admin-ayuda-section .ayuda-loan-form button:hover {
 
 html.dark .dashboard-theme .admin-ayuda-section .responsive-table-wrap thead {
   background: #202d40 !important;
+}
+
+/* Webcraft Labs unified application palette */
+.dashboard-theme .bg-white,
+.dashboard-theme .bg-\[\#fffefd\],
+.dashboard-theme .bg-\[\#ffffff\] {
+  background-color: var(--brand-surface) !important;
+}
+
+.dashboard-theme .bg-slate-50,
+.dashboard-theme .bg-slate-50\/40,
+.dashboard-theme .bg-slate-50\/50,
+.dashboard-theme .bg-slate-100 {
+  background-color: #f5f1ea !important;
+}
+
+.dashboard-theme .border-slate-100,
+.dashboard-theme .border-slate-200,
+.dashboard-theme .border-\[\#dbe4f0\],
+.dashboard-theme .border-\[\#e2e8f0\],
+.dashboard-theme .border-\[\#edf1f6\] {
+  border-color: var(--brand-border) !important;
+}
+
+.dashboard-theme .text-blue-600,
+.dashboard-theme .text-blue-700,
+.dashboard-theme .text-blue-800,
+.dashboard-theme .text-\[\#2563eb\],
+.dashboard-theme .text-\[\#1d4ed8\] {
+  color: var(--brand-gold) !important;
+}
+
+.dashboard-theme .bg-blue-50,
+.dashboard-theme .bg-blue-50\/50,
+.dashboard-theme .bg-blue-50\/70,
+.dashboard-theme .bg-blue-100,
+.dashboard-theme .bg-\[\#eef4ff\] {
+  background-color: #f3eadb !important;
+}
+
+.dashboard-theme .border-blue-100,
+.dashboard-theme .border-blue-200,
+.dashboard-theme .border-blue-300 {
+  border-color: #dfc89f !important;
+}
+
+.dashboard-theme .bg-blue-600,
+.dashboard-theme .bg-\[\#2563eb\] {
+  background-color: var(--brand-gold) !important;
+}
+
+.dashboard-theme .hover\:bg-blue-700:hover,
+.dashboard-theme .hover\:bg-\[\#1d4ed8\]:hover {
+  background-color: #80591f !important;
+}
+
+.dashboard-theme input:focus,
+.dashboard-theme select:focus,
+.dashboard-theme textarea:focus {
+  border-color: var(--brand-gold) !important;
+  box-shadow: 0 0 0 3px rgb(154 108 38 / 0.12) !important;
+}
+
+.dashboard-theme table thead {
+  color: #66645f;
+}
+
+.dashboard-theme tbody tr:hover {
+  background-color: #f5f1ea !important;
+}
+
+.dashboard-theme .theme-toggle {
+  border-color: var(--brand-border);
+  background: var(--brand-surface);
+  color: var(--brand-charcoal);
+}
+
+html.dark {
+  --brand-ink: #eee9df;
+  --brand-charcoal: #151719;
+  --brand-gold: #d1a14d;
+  --brand-gold-light: #e0b45f;
+  --brand-ivory: #111315;
+  --brand-surface: #1d2022;
+  --brand-border: #393735;
+  --zonal-surface: var(--brand-surface);
+  --zonal-background: var(--brand-ivory);
+  --zonal-border: var(--brand-border);
+}
+
+html.dark body,
+html.dark .dashboard-theme {
+  background: #111315;
+  color: #eee9df;
+}
+
+html.dark .dashboard-sidebar {
+  border-color: #393735 !important;
+  background: #181a1c !important;
+}
+
+html.dark .dashboard-sidebar .dashboard-nav-item.bg-\[\#1b1d1f\] {
+  border: 1px solid #8e6a32;
+  background: linear-gradient(135deg, #2c2923, #3a3020) !important;
+  color: #f6ead6 !important;
+  box-shadow: 0 10px 26px rgb(0 0 0 / 0.35);
+}
+
+.dashboard-theme .bg-\[\#0d1b4c\],
+.dashboard-theme .bg-\[\#071a3d\],
+.dashboard-theme .bg-\[\#09122f\] {
+  background-color: var(--brand-charcoal) !important;
+}
+
+.dashboard-theme .hover\:bg-\[\#09122f\]:hover,
+.dashboard-theme .hover\:bg-\[\#0c285a\]:hover {
+  background-color: #35302a !important;
+}
+
+.dashboard-theme .text-\[\#0d1b4c\],
+.dashboard-theme .text-\[\#071a3d\],
+.dashboard-theme .text-\[\#111827\] {
+  color: var(--brand-ink) !important;
+}
+
+.dashboard-theme .focus\:border-blue-500:focus,
+.dashboard-theme .focus\:border-\[\#2563eb\]:focus {
+  border-color: var(--brand-gold) !important;
+}
+
+.dashboard-theme .focus\:ring-blue-100:focus,
+.dashboard-theme .focus\:ring-blue-500:focus {
+  --tw-ring-color: rgb(154 108 38 / 0.18) !important;
+}
+
+.dashboard-theme .shadow-blue-200,
+.dashboard-theme .shadow-blue-950\/10 {
+  --tw-shadow-color: rgb(27 29 31 / 0.12) !important;
+}
+
+.dashboard-brand-logo {
+  opacity: 0.96;
+  filter: brightness(0) saturate(100%) invert(11%) sepia(4%) saturate(410%) hue-rotate(175deg) brightness(96%) contrast(91%);
+}
+
+html.dark .dashboard-brand-logo {
+  opacity: 1;
+  filter: none;
+}
+
+html.dark .dashboard-theme .bg-white,
+html.dark .dashboard-theme .bg-\[\#fffefd\],
+html.dark .dashboard-theme .dashboard-stat-card,
+html.dark .dashboard-theme .dashboard-sales-card {
+  background-color: #1d2022 !important;
+  border-color: #393735 !important;
+}
+
+html.dark .dashboard-theme .bg-slate-50,
+html.dark .dashboard-theme .bg-slate-50\/40,
+html.dark .dashboard-theme .bg-slate-50\/50,
+html.dark .dashboard-theme .bg-slate-100,
+html.dark .dashboard-theme .bg-blue-50,
+html.dark .dashboard-theme .bg-blue-50\/40,
+html.dark .dashboard-theme .bg-blue-50\/50,
+html.dark .dashboard-theme .bg-blue-50\/70,
+html.dark .dashboard-theme .bg-blue-100 {
+  background-color: #25282a !important;
+}
+
+html.dark .dashboard-theme .text-slate-900,
+html.dark .dashboard-theme .text-slate-800,
+html.dark .dashboard-theme .text-slate-700 {
+  color: #eee9df !important;
+}
+
+html.dark .dashboard-theme .text-slate-600,
+html.dark .dashboard-theme .text-slate-500,
+html.dark .dashboard-theme .text-slate-400 {
+  color: #aaa69e !important;
+}
+
+html.dark .dashboard-theme input,
+html.dark .dashboard-theme select,
+html.dark .dashboard-theme textarea {
+  border-color: #44413d !important;
+  background-color: #181a1c !important;
+  color: #eee9df !important;
+}
+
+html.dark .dashboard-theme table thead,
+html.dark .dashboard-theme .admin-ayuda-section .responsive-table-wrap thead {
+  background: #25282a !important;
+  color: #b9b4aa !important;
+}
+
+html.dark .dashboard-theme tbody tr:hover {
+  background-color: #25282a !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

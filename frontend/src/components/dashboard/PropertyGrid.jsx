@@ -25,7 +25,7 @@ function PropertyGrid({ setActivePage }) {
           <h2 className="text-2xl font-black tracking-tight text-[#111827]">Properties</h2>
           <p className="mt-1 text-[#64748b]">Newly added database listings</p>
         </div>
-        <button onClick={openInternalProperties} className="rounded-xl bg-[#0d1b4c] px-6 py-3 font-semibold text-white shadow-lg">
+        <button onClick={openInternalProperties} className="rounded-xl bg-[#1b1d1f] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-[#40382c]">
           View All
         </button>
       </div>

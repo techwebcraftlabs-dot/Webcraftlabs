@@ -175,9 +175,9 @@ function MyProfile() {
         <Field label="Sales Director (SD)" value={profile.salesDirector || "None"} readOnly />
         <Field label="EVP" value={profile.evp || "None"} readOnly />
         <Field label="Accredited Date" value={profile.accreditedDate} readOnly />
-        <Field label="Zonal Login Email" value={profile.zonalEmail} readOnly />
+        <Field label="Platform Login Email" value={profile.zonalEmail} readOnly />
         <Field label="Status" value={profile.status} readOnly />
-        <Field label="Zonal Tax Rate" value={`${Number(profile.zonalTaxRate || 0)}%`} readOnly />
+        <Field label="Platform Tax Rate" value={`${Number(profile.zonalTaxRate || 0)}%`} readOnly />
       </Section>
 
       <div className="border-t border-gray-100 pt-7">

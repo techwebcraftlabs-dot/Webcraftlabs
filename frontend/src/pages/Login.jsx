@@ -73,7 +73,7 @@ function Login() {
         </h1>
 
         <p className="text-gray-500 text-center mt-3">
-          Welcome back to Zonal Realty
+          Welcome back to Webcraft Labs
         </p>
 
         <form

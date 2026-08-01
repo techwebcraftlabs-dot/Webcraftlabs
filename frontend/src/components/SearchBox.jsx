@@ -1,121 +1,22 @@
-import { Building2, ChevronDown, MapPin, Search, Tag } from 'lucide-react'
+import { ArrowRight, ChevronDown, Search } from 'lucide-react'
 
 const fields = [
-  {
-    name: 'location',
-    label: 'Location',
-    placeholder: 'Choose Location',
-    icon: MapPin,
-    options: ['Makati', 'BGC', 'Cavite', 'Tagaytay', 'Rizal', 'Nuvali', 'Antipolo'],
-  },
-  {
-    name: 'type',
-    label: 'Property Type',
-    placeholder: 'Choose Type',
-    icon: Building2,
-    options: ['Villa', 'Condo', 'House', 'Townhouse', 'Penthouse'],
-  },
-  {
-    name: 'budget',
-    label: 'Price Range',
-    placeholder: 'Select Budget',
-    icon: Tag,
-    options: ['Under 7M', '7M - 15M', '15M+'],
-  },
+  { name: 'type', label: 'Property type', options: ['Villa', 'Condo', 'House', 'Townhouse', 'Penthouse'] },
+  { name: 'location', label: 'Preferred location', options: ['Makati', 'BGC', 'Cavite', 'Tagaytay', 'Rizal', 'Nuvali', 'Antipolo'] },
+  { name: 'budget', label: 'Price range', options: ['Under 7M', '7M - 15M', '15M+'] },
 ]
 
 function SearchBox({ filters, onFilterChange, onSearch }) {
-  const updateFilter = (field, value) => {
-    onFilterChange?.({
-      ...filters,
-      [field]: value,
-    })
-  }
+  const updateFilter = (name, value) => onFilterChange?.({ ...filters, [name]: value })
 
-  return (
-    <div className="rounded-[20px] border border-[#d6b56d]/35 bg-white/95 p-2.5 shadow-[0_22px_55px_rgba(2,8,23,0.26)] backdrop-blur-xl sm:p-3">
-      <div className="grid grid-cols-1 items-stretch gap-2 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_180px]">
-        {fields.map((field) => (
-          <FilterSelect
-            key={field.name}
-            field={field}
-            value={filters?.[field.name] || ''}
-            onChange={(value) => updateFilter(field.name, value)}
-          />
-        ))}
-
-        <button
-          type="button"
-          onClick={onSearch}
-          className="
-            inline-flex
-            min-h-[52px]
-            items-center
-            justify-center
-            gap-3
-            rounded-xl
-            border border-[#d6b56d]/40
-            bg-[#071a3d]
-            px-5
-            text-sm
-            font-black
-            text-white
-            transition-all
-            duration-300
-            shadow-xl
-            hover:-translate-y-0.5
-            hover:bg-[#123f91]
-            lg:min-h-[54px]
-          "
-        >
-          <Search className="h-5 w-5" />
-          Search Property
-        </button>
-      </div>
+  return <aside className="overflow-hidden rounded-[4px] border border-black/10 bg-white shadow-[0_28px_80px_rgba(24,22,18,0.22)]">
+    <div className="bg-[#1c1f21] px-6 py-5 text-white"><p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#d4a64d]">Property Finder</p><h2 className="mt-2 text-lg font-semibold">Find your ideal address</h2></div>
+    <div className="space-y-3 p-5 sm:p-6">
+      {fields.map((field) => <label key={field.name} className="relative block"><span className="sr-only">{field.label}</span><select value={filters?.[field.name] || ''} onChange={(event) => updateFilter(field.name, event.target.value)} className="min-h-12 w-full appearance-none rounded-sm border border-[#d8d5ce] bg-white px-4 pr-10 text-sm text-[#52555a] outline-none transition focus:border-[#a8782f] focus:ring-2 focus:ring-[#a8782f]/15"><option value="">{field.label}</option>{field.options.map((option) => <option key={option}>{option}</option>)}</select><ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#74777b]" /></label>)}
+      <button type="button" onClick={onSearch} className="group inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-sm bg-[linear-gradient(100deg,#9a6c26,#c99a45)] px-5 text-xs font-black uppercase tracking-[0.1em] text-white transition hover:brightness-95 focus:outline-none focus:ring-4 focus:ring-[#b48132]/25"><Search size={17} />Search properties</button>
+      <button type="button" onClick={onSearch} className="inline-flex min-h-11 items-center gap-2 text-xs font-bold text-[#55585b] transition hover:text-[#9a6c26]">View all available properties <ArrowRight size={14} /></button>
     </div>
-  )
-}
-
-function FilterSelect({ field, value, onChange }) {
-  const Icon = field.icon
-
-  return (
-    <label className="flex min-h-[56px] items-center gap-3 rounded-xl border border-[#e3e7ee] px-3 py-2.5 transition hover:bg-[#faf9f6] lg:min-h-[58px] lg:rounded-none lg:border-0 lg:border-r lg:pl-4 lg:pr-4">
-      <Icon className="h-5 w-5 shrink-0 text-[#9b762f]" />
-
-      <span className="min-w-0 flex-1">
-        <span className="block text-xs font-bold text-[#071a3d]">
-          {field.label}
-        </span>
-
-        <span className="relative mt-1 block">
-          <select
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            className="
-              w-full
-              cursor-pointer
-              appearance-none
-              bg-transparent
-              pr-7
-              text-sm
-              text-[#8a8c94]
-              outline-none
-            "
-          >
-            <option value="">{field.placeholder}</option>
-            {field.options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-
-          <ChevronDown className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8a8c94]" />
-        </span>
-      </span>
-    </label>
-  )
+  </aside>
 }
 
 export default SearchBox

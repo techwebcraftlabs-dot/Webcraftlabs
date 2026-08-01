@@ -1,151 +1,30 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Bath,
+  ArrowRight,
+  Award,
   BedDouble,
   Building2,
   Car,
   CheckCircle,
-  House,
   Mail,
   MapPin,
   MessageCircle,
   Phone,
   Ruler,
-  TrendingUp,
+  ShieldCheck,
   UsersRound,
   X,
 } from 'lucide-react'
 
 import SearchBox from './SearchBox'
-import About3D from './About3D'
 import AgentSocialLinks, { FacebookIcon } from './AgentSocialLinks'
-import { propertyApi, publicStatsApi } from '../lib/api'
+import { propertyApi } from '../lib/api'
 import { formatPropertyPrice, propertyPriceIntersects } from '../lib/propertyPrice'
 import { groupPropertiesByProject } from '../lib/propertyProjects'
 
-const propertyListings = [
-  {
-    title: 'Modern Villa',
-    location: 'Tagaytay City',
-    type: 'Villa',
-    priceValue: 12.5,
-    image: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?q=80&w=1200&auto=format&fit=crop',
-    beds: 4,
-    baths: 4,
-    parking: 2,
-    floorArea: '320 sqm',
-    lotArea: '480 sqm',
-    description: 'A private Tagaytay villa with open living spaces, cool-weather views, and room for family weekends or premium short-stay investment.',
-    highlights: ['Panoramic ridge-facing windows', 'Open kitchen and dining layout', 'Ready for private viewing'],
-    agentIds: ['michael', 'olivia'],
-  },
-  {
-    title: 'Luxury Condominium',
-    location: 'Makati City',
-    type: 'Condo',
-    priceValue: 8.9,
-    image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop',
-    beds: 2,
-    baths: 2,
-    parking: 1,
-    floorArea: '88 sqm',
-    lotArea: 'High-rise',
-    description: 'A polished Makati residence close to business districts, dining, and daily essentials for buyers who want convenience first.',
-    highlights: ['Concierge-ready tower', 'Near offices and lifestyle malls', 'Ideal for rental income'],
-    agentIds: ['sophia', 'mark'],
-  },
-  {
-    title: 'Executive House',
-    location: 'Cavite',
-    type: 'House',
-    priceValue: 6.8,
-    image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?q=80&w=1200&auto=format&fit=crop',
-    beds: 3,
-    baths: 3,
-    parking: 2,
-    floorArea: '210 sqm',
-    lotArea: '300 sqm',
-    description: 'A practical executive home with flexible spaces for growing families and easy access to southern growth corridors.',
-    highlights: ['Quiet village setting', 'Expandable service area', 'Good starter family home'],
-    agentIds: ['michael', 'mark'],
-  },
-  {
-    title: 'Premium Townhouse',
-    location: 'Rizal',
-    type: 'Townhouse',
-    priceValue: 5.4,
-    image: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?q=80&w=1200&auto=format&fit=crop',
-    beds: 3,
-    baths: 2,
-    parking: 1,
-    floorArea: '165 sqm',
-    lotArea: '120 sqm',
-    description: 'A low-maintenance townhouse for buyers who want a city-adjacent home with a calmer residential environment.',
-    highlights: ['Move-in friendly layout', 'Near schools and retail', 'Efficient monthly carrying cost'],
-    agentIds: ['olivia', 'sophia'],
-  },
-  {
-    title: 'Skyline Residence',
-    location: 'BGC',
-    type: 'Condo',
-    priceValue: 14.2,
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=1200',
-    beds: 3,
-    baths: 3,
-    parking: 2,
-    floorArea: '145 sqm',
-    lotArea: 'High-rise',
-    description: 'A bright BGC residence built for walkable city living, with generous windows and quick access to premium offices.',
-    highlights: ['Prime business district address', 'Great resale profile', 'Flexible turnover options'],
-    agentIds: ['sophia', 'mark'],
-  },
-  {
-    title: 'Grand Estate',
-    location: 'Nuvali',
-    type: 'House',
-    priceValue: 18.7,
-    image: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?q=80&w=1200',
-    beds: 5,
-    baths: 5,
-    parking: 3,
-    floorArea: '420 sqm',
-    lotArea: '650 sqm',
-    description: 'A larger estate-style property for buyers who want open outdoor space, privacy, and a long-term family base.',
-    highlights: ['Large garden frontage', 'Premium village location', 'Best for end-use buyers'],
-    agentIds: ['mark', 'michael'],
-  },
-  {
-    title: 'Luxury Penthouse',
-    location: 'Makati',
-    type: 'Penthouse',
-    priceValue: 22.5,
-    image: 'https://images.unsplash.com/photo-1494526585095-c41746248156?q=80&w=1200',
-    beds: 4,
-    baths: 4,
-    parking: 3,
-    floorArea: '260 sqm',
-    lotArea: 'Top floor',
-    description: 'A premium penthouse with generous entertaining areas for buyers looking for a high-end Makati address.',
-    highlights: ['Private lift lobby feel', 'Large entertainment space', 'Excellent city views'],
-    agentIds: ['sophia', 'michael'],
-  },
-  {
-    title: 'Family Residence',
-    location: 'Antipolo',
-    type: 'House',
-    priceValue: 7.2,
-    image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1200',
-    beds: 4,
-    baths: 3,
-    parking: 2,
-    floorArea: '240 sqm',
-    lotArea: '360 sqm',
-    description: 'A comfortable Antipolo family home with outdoor breathing room and a relaxed neighborhood feel.',
-    highlights: ['Pool-ready outdoor area', 'Family-friendly village', 'Good value per square meter'],
-    agentIds: ['olivia', 'mark'],
-  },
-]
+const propertyListings = []
 
 const budgetRanges = {
   'Under 7M': (property) => propertyPriceIntersects(property, 0, 6_999_999),
@@ -205,71 +84,46 @@ function Hero() {
   return (
     <section id="home">
 
-      {/* HERO */}
-      <div className="relative bg-white pt-[66px]">
-        <div className="relative overflow-hidden pb-8 md:min-h-[680px] md:pb-0 lg:min-h-[calc(100svh-66px)]">
-          <img
-            src="/homepage-neighborhood.png"
-            alt="Residential subdivision"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
+      {/* CORPORATE HERO */}
+      <div className="relative overflow-hidden bg-[#f5f1e9] pt-[78px]">
+        <div className="absolute right-0 top-[78px] hidden h-[640px] w-[68%] lg:block">
+          <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=88&w=2200&auto=format&fit=crop" alt="Contemporary luxury residence at dusk" className="h-full w-full object-cover object-center" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#f5f1e9] via-[#f5f1e9]/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-white/10" />
+        </div>
 
-          <div className="absolute inset-0 bg-black/20" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/52 to-black/5" />
-          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/65 to-transparent" />
-
-          <div className="relative z-20 mx-auto max-w-[1180px] px-5 pb-0 pt-9 sm:px-6 md:px-10 md:pt-12 xl:px-0">
-            <div className="max-w-[660px]">
-              <div className="mb-5 inline-flex max-w-full items-center gap-3 rounded-full border border-white/15 bg-black/45 px-4 py-2.5 text-xs font-semibold text-white shadow-2xl backdrop-blur-md sm:px-5 sm:py-3 sm:text-sm">
-                <span className="h-3 w-3 rounded-full bg-emerald-400 shadow-[0_0_0_6px_rgba(52,211,153,0.12)]" />
-                Trusted by 100+ Real Estate Developers
-              </div>
-
-              <h1 className="leading-none">
-                <img
-                  src="/zonal-realty-logo.png"
-                  alt="Zonal Realty"
-                  className="h-24 w-auto max-w-full object-contain object-left brightness-0 invert sm:h-28 lg:h-32"
-                />
-              </h1>
-
-              <p className="mt-5 max-w-[650px] text-base font-medium leading-7 text-white lg:text-lg lg:leading-8">
-                Find the right home, investment property, or project launch
-                through a curated marketplace backed by trusted developers and
-                licensed real estate professionals.
-              </p>
-
-              <div className="mt-6 grid max-w-[680px] gap-3 text-sm font-semibold text-white sm:grid-cols-3">
-                {[
-                  'Verified property listings',
-                  'Projects from trusted developers',
-                  'Agent-assisted buying',
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="flex min-h-[54px] items-center gap-2 rounded-xl border border-[#d6b56d]/30 bg-black/35 px-3 py-3 backdrop-blur-md lg:px-4"
-                  >
-                    <CheckCircle className="h-4 w-4 shrink-0 text-[#d4af37]" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
+        <div className="relative mx-auto grid min-h-[640px] max-w-[1440px] items-center gap-9 px-5 py-12 sm:px-7 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-10 lg:py-16 xl:px-14">
+          <div className="relative z-10 max-w-[650px]">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#9a6c26]">Built around better possibilities</p>
+            <h1 className="mt-5 text-[clamp(3.25rem,7vw,6.4rem)] font-semibold leading-[0.88] tracking-[-0.055em] text-[#191b1e]">Building better<br />communities<span className="text-[#b88936]">.</span></h1>
+            <p className="mt-7 max-w-[520px] text-base leading-7 text-[#55575b] sm:text-lg sm:leading-8">Webcraft Labs brings properties, developers, and clients together through thoughtful real estate experiences built on trust, clarity, and lasting value.</p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <button type="button" onClick={handleSearchProperties} className="group inline-flex min-h-13 items-center justify-center gap-4 bg-[#1b1d1f] px-7 text-xs font-black uppercase tracking-[0.12em] text-white transition hover:bg-[#9a6c26]">Explore properties <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" /></button>
+              <button type="button" onClick={() => document.getElementById('developers')?.scrollIntoView({ behavior: 'smooth' })} className="inline-flex min-h-13 items-center justify-center border border-[#292b2e] bg-white/55 px-7 text-xs font-black uppercase tracking-[0.12em] text-[#202225] transition hover:bg-white">Our developers</button>
             </div>
           </div>
 
-          <div className="relative z-40 mt-8 px-5 md:px-8 xl:px-12">
-            <div className="mx-auto max-w-[1000px]">
-              <SearchBox
-                filters={filters}
-                onFilterChange={setFilters}
-                onSearch={handleSearchProperties}
-              />
-            </div>
-          </div>
+          <div className="relative z-20 self-center lg:translate-y-4"><SearchBox filters={filters} onFilterChange={setFilters} onSearch={handleSearchProperties} /></div>
+        </div>
 
-          <div className="relative z-30 mt-8">
-            <HomeStatsStrip />
+        <div className="relative z-20 mx-auto max-w-[1300px] bg-[#1b1d1f] text-white shadow-[0_24px_70px_rgba(17,18,19,0.2)]">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { icon: Building2, title: 'Integrated', text: 'Property operations' },
+              { icon: ShieldCheck, title: 'Secure', text: 'Protected workflows' },
+              { icon: UsersRound, title: 'Connected', text: 'Developer partnerships' },
+              { icon: Award, title: 'Dedicated', text: 'Client-first service' },
+            ].map(({ icon: Icon, title, text }) => <div key={title} className="flex min-h-[112px] items-center gap-4 border-b border-white/10 px-6 last:border-b-0 sm:border-r lg:border-b-0"><Icon className="h-8 w-8 shrink-0 text-[#c99740]" strokeWidth={1.4} /><div><p className="text-xl font-semibold">{title}</p><p className="mt-1 text-xs text-white/55">{text}</p></div></div>)}
           </div>
+        </div>
+
+        <div className="mx-auto grid max-w-[1300px] gap-px border-x border-b border-[#ddd7cc] bg-[#ddd7cc] sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ['Quality', 'Thoughtful execution at every stage.'],
+            ['Integrity', 'Transparent, principled partnerships.'],
+            ['Commitment', 'Consistent support from start to finish.'],
+            ['Excellence', 'Standards designed to create lasting value.'],
+          ].map(([title, text], index) => <div key={title} className="flex min-h-[128px] gap-4 bg-[#faf8f3] p-6"><span className="text-sm font-semibold text-[#ae7c2d]">0{index + 1}</span><div><h2 className="font-semibold text-[#202225]">{title}</h2><p className="mt-2 text-sm leading-6 text-[#686a6d]">{text}</p></div></div>)}
         </div>
       </div>
 
@@ -291,51 +145,43 @@ function Hero() {
       <div>
 
         <p className="mb-4 text-xs font-black uppercase tracking-[0.22em] text-[#9b762f]">
-          About Zonal Realty
+          About Webcraft Labs
         </p>
 
-        <h2 className="text-[clamp(2.4rem,6vw,3.8rem)] font-black leading-[0.96] tracking-tight text-[#071a3d]">
-          Next Generation
+        <h2 className="text-[clamp(2.4rem,6vw,3.8rem)] font-semibold leading-[0.96] tracking-[-0.04em] text-[#202225]">
+          Better places.
           <br />
-          Real Estate
+          Better partnerships.
         </h2>
 
         <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 lg:text-lg">
-          Zonal Realty empowers developers,
-          brokers and agents through a modern
-          real estate ecosystem built for speed,
-          transparency and growth.
+          We connect real estate vision with disciplined execution—giving
+          developers, professionals, and clients a clearer path from inquiry to ownership.
         </p>
 
         <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
 
           <div className="rounded-2xl border border-[#e7dfcf] bg-white p-4 shadow-[0_10px_28px_rgba(7,26,61,0.05)]">
-            <h3 className="text-2xl font-black text-[#071a3d] lg:text-3xl">
-              2K+
-            </h3>
+            <h3 className="text-lg font-semibold text-[#202225]">Strategy</h3>
 
             <p className="text-gray-500">
-              Agents
+              Clear direction for every development opportunity.
             </p>
           </div>
 
           <div className="rounded-2xl border border-[#e7dfcf] bg-white p-4 shadow-[0_10px_28px_rgba(7,26,61,0.05)]">
-            <h3 className="text-2xl font-black text-[#071a3d] lg:text-3xl">
-              300+
-            </h3>
+            <h3 className="text-lg font-semibold text-[#202225]">Experience</h3>
 
             <p className="text-gray-500">
-              Developers
+              Thoughtful journeys for clients and partners.
             </p>
           </div>
 
           <div className="rounded-2xl border border-[#e7dfcf] bg-white p-4 shadow-[0_10px_28px_rgba(7,26,61,0.05)]">
-            <h3 className="text-2xl font-black text-[#071a3d] lg:text-3xl">
-              1.2K+
-            </h3>
+            <h3 className="text-lg font-semibold text-[#202225]">Growth</h3>
 
             <p className="text-gray-500">
-              Properties
+              Systems designed to scale with the business.
             </p>
           </div>
 
@@ -343,9 +189,11 @@ function Hero() {
 
       </div>
 
-      <div>
-  <About3D />
-</div>
+      <div className="relative min-h-[420px] overflow-hidden bg-[#1b1d1f]">
+        <img src="https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?q=85&w=1400&auto=format&fit=crop" alt="Refined contemporary residential interior" loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-90" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
+        <div className="absolute bottom-0 left-0 max-w-sm border-t border-r border-white/20 bg-[#1b1d1f]/90 p-6 text-white backdrop-blur"><p className="text-xs font-black uppercase tracking-[0.18em] text-[#d1a14d]">Our perspective</p><p className="mt-3 text-lg leading-7">Real estate performs best when design, service, and technology move as one.</p></div>
+      </div>
 
     </div>
 
@@ -354,169 +202,26 @@ function Hero() {
       </section>
 
       {/* DEVELOPERS */}
-<section
-  id="developers"
-  className="relative overflow-hidden border-y border-[#e8e3da] bg-white py-14 sm:py-16 lg:py-20"
->
+      <section id="developers" className="bg-[#f7f4ee] py-16 sm:py-20 lg:py-24">
+        <div className="mx-auto max-w-[1300px] px-5 sm:px-7 lg:px-10">
+          <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-end">
+            <div><p className="text-xs font-black uppercase tracking-[0.2em] text-[#9a6c26]">Development expertise</p><h2 className="mt-4 text-[clamp(2.6rem,5vw,4.5rem)] font-semibold leading-[0.94] tracking-[-0.045em] text-[#202225]">Spaces designed<br />for life<span className="text-[#b88936]">.</span></h2></div>
+            <p className="max-w-2xl text-base leading-7 text-[#64666a] lg:justify-self-end">From private residences to connected communities, our approach combines market insight, strong partnerships, and a commitment to enduring quality.</p>
+          </div>
 
-  {/* Background Glow */}
-  <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#bfdbfe]/10 rounded-full blur-[150px]" />
-  <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#60a5fa]/10 rounded-full blur-[150px]" />
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {[
+              { title: 'Residential', text: 'Thoughtful homes shaped around how people live today.', image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=85&w=1200&auto=format&fit=crop' },
+              { title: 'Vertical Living', text: 'Well-connected spaces with convenience at their core.', image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=85&w=1200&auto=format&fit=crop' },
+              { title: 'Communities', text: 'Places designed for belonging, access, and long-term value.', image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=85&w=1200&auto=format&fit=crop' },
+            ].map((item, index) => <article key={item.title} className="group overflow-hidden border border-[#ded8cd] bg-white">
+              <div className="relative h-72 overflow-hidden"><img src={item.image} alt={`${item.title} architecture`} loading="lazy" className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.035]" /><span className="absolute left-5 top-5 bg-[#1b1d1f] px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white">0{index + 1}</span></div>
+              <div className="p-6"><h3 className="text-2xl font-semibold tracking-[-0.02em] text-[#202225]">{item.title}</h3><p className="mt-3 min-h-12 text-sm leading-6 text-[#686a6d]">{item.text}</p><button type="button" onClick={handleSearchProperties} className="mt-5 inline-flex min-h-11 items-center gap-3 text-xs font-black uppercase tracking-[0.1em] text-[#8d6221]">Explore portfolio <ArrowRight size={15} /></button></div>
+            </article>)}
+          </div>
+        </div>
+      </section>
 
-  <div className="max-w-7xl mx-auto px-5 sm:px-6 md:px-8 xl:px-12 relative z-10">
-
-    {/* Heading */}
-    <div className="text-center mb-10 sm:mb-12 lg:mb-14">
-
-      <span
-        className="
-          inline-block
-          px-5
-          py-2
-          rounded-full
-          border border-[#d6b56d]/30
-          bg-[#faf7ef]
-          text-[#9b762f]
-          uppercase
-          tracking-[0.24em]
-          text-xs
-          font-bold
-          mb-6
-        "
-      >
-        Our Professionals
-      </span>
-
-      <h2 className="text-[clamp(2.3rem,6vw,3.65rem)] font-black leading-tight tracking-tight text-[#071a3d]">
-        Meet The Experts
-      </h2>
-
-      <p className="mt-6 text-gray-500 max-w-2xl mx-auto text-lg">
-        Our experienced property consultants and real estate
-        professionals are committed to helping clients find
-        the perfect investment and dream home.
-      </p>
-
-    </div>
-
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:gap-6">
-
-  {[
-    {
-      name: 'James Carter',
-      role: 'Senior Property Developer',
-      image:
-        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=1200&auto=format&fit=crop',
-    },
-    {
-      name: 'Sophia Miller',
-      role: 'Real Estate Consultant',
-      image:
-        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1200&auto=format&fit=crop',
-    },
-    {
-      name: 'Michael Lee',
-      role: 'Luxury Property Specialist',
-      image:
-        'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1200&auto=format&fit=crop',
-    },
-    {
-      name: 'Daniel Reyes',
-      role: 'Sales Director',
-      image:
-        'https://images.unsplash.com/photo-1504257432389-52343af06ae3?q=80&w=1200&auto=format&fit=crop',
-    },
-    {
-      name: 'Olivia Cruz',
-      role: 'Property Consultant',
-      image:
-        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=1200&auto=format&fit=crop',
-    },
-    {
-      name: 'Mark Santos',
-      role: 'Broker Manager',
-      image:
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1200&auto=format&fit=crop',
-    },
-    {
-      name: 'Emma Walker',
-      role: 'Investment Advisor',
-      image:
-        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1200&auto=format&fit=crop',
-    },
-    {
-      name: 'Nathan Cole',
-      role: 'Property Analyst',
-      image:
-        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=1200&auto=format&fit=crop',
-    },
-  ].map((dev, index) => (
-    <div
-      key={index}
-      className="
-      group
-      relative
-      h-[320px]
-      rounded-[22px]
-      overflow-hidden
-      border border-[#d6b56d]/20
-      shadow-[0_16px_38px_rgba(7,26,61,0.12)]
-      hover:-translate-y-2
-      transition-all
-      duration-500
-      "
-    >
-
-      <img
-        src={dev.image}
-        alt={dev.name}
-        className="
-        w-full
-        h-full
-        object-cover
-        group-hover:scale-110
-        transition-all
-        duration-700
-        "
-      />
-
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-
-      <div className="absolute inset-4 border border-white/20 rounded-[20px]" />
-
-      <div className="absolute bottom-6 left-6 right-6">
-
-        <span
-          className="
-          inline-block
-          px-3 py-1
-          rounded-full
-          bg-[#d6b56d]
-          text-[#071a3d]
-          text-xs
-          font-bold
-          "
-        >
-          TEAM MEMBER
-        </span>
-
-        <h3 className="mt-3 text-xl font-black text-white">
-          {dev.name}
-        </h3>
-
-        <p className="text-white/70 mt-2">
-          {dev.role}
-        </p>
-
-      </div>
-
-    </div>
-  ))}
-
-    </div>
-  </div>
-
-</section>
 {/* TRUSTED DEVELOPERS */}
 <section className="relative overflow-hidden bg-[#faf9f6] py-14 sm:py-16 lg:py-20">
 
@@ -875,15 +580,15 @@ function Hero() {
 
         <h2>
           <img
-            src="/zonal-realty-logo.png"
-            alt="Zonal Realty"
-            className="h-16 w-auto max-w-full object-contain object-left brightness-0 invert"
+            src="/webcraft-logo-transparent.png"
+            alt="Webcraft Labs"
+            className="h-20 w-[260px] max-w-full object-contain object-left"
           />
         </h2>
 
         <div className="mt-4 h-px w-12 bg-[#d6b56d]" />
         <p className="mt-4 text-sm leading-6 text-white/60">
-          A complete real estate ecosystem designed
+          A complete business ecosystem designed
           for developers, brokers, agents and
           property buyers across the Philippines.
         </p>
@@ -967,26 +672,26 @@ function Hero() {
 
           <li className="flex max-w-xs items-start gap-3 rounded-xl border border-white/10 bg-white/[0.035] p-3 text-white/60">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#e1bd70]" />
-            Block 2 Lot 26 Westwood Highlands, Langkaan 1, Dasmariñas, Philippines, 4114
+            123 Innovation Avenue, Makati City, Philippines, 1200
           </li>
 
           <li className="flex items-center gap-3 text-white/60">
             <Mail className="h-4 w-4 shrink-0 text-[#e1bd70]" />
             <a
-              href="mailto:zonalrealtystaff2019@gmail.com"
+              href="mailto:tech.webcraftlabs@gmail.com"
               className="transition hover:text-white"
             >
-              zonalrealtystaff2019@gmail.com
+              tech.webcraftlabs@gmail.com
             </a>
           </li>
 
           <li className="flex items-center gap-3 text-white/60">
             <Phone className="h-4 w-4 shrink-0 text-[#e1bd70]" />
             <a
-              href="tel:+639399163098"
+              href="tel:+639175550142"
               className="transition hover:text-white"
             >
-              0939 916 3098
+              0917 555 0142
             </a>
           </li>
 
@@ -1000,17 +705,17 @@ function Hero() {
     <div className="flex flex-col items-center justify-between gap-5 pt-6 sm:flex-row">
 
       <p className="text-center text-xs text-white/40 sm:text-left">
-       © {new Date().getFullYear()} Zonal Realty. All Rights Reserved.
+       Developed by Webcraft Labs
       </p>
 
       <div className="flex gap-4">
 
         <a
-          href="https://www.facebook.com/ZonalRealty"
+          href="https://www.facebook.com/"
           target="_blank"
           rel="noreferrer noopener"
-          aria-label="Visit Zonal Realty on Facebook"
-          title="Zonal Realty on Facebook"
+          aria-label="Visit Webcraft Labs on Facebook"
+          title="Webcraft Labs on Facebook"
           className="
           w-10 h-10
           rounded-full
@@ -1036,82 +741,6 @@ function Hero() {
   )
 }
 
-function HomeStatsStrip() {
-  const [databaseStats, setDatabaseStats] = useState({
-    activeAgents: 0,
-    developers: 0,
-    properties: 0,
-    customerSatisfaction: 98,
-  })
-
-  useEffect(() => {
-    let active = true
-
-    publicStatsApi.get()
-      .then((stats) => {
-        if (active) setDatabaseStats(stats)
-      })
-      .catch((error) => console.error('Unable to load public homepage stats.', error))
-
-    return () => { active = false }
-  }, [])
-
-  const stats = [
-    {
-      value: Number(databaseStats.activeAgents || 0).toLocaleString('en-PH'),
-      label: 'Active Agents',
-      icon: UsersRound,
-    },
-    {
-      value: Number(databaseStats.developers || 0).toLocaleString('en-PH'),
-      label: 'Developers',
-      icon: Building2,
-    },
-    {
-      value: Number(databaseStats.properties || 0).toLocaleString('en-PH'),
-      label: 'Properties',
-      icon: House,
-    },
-    {
-      value: `${databaseStats.customerSatisfaction || 98}%`,
-      label: 'Customer Satisfaction',
-      icon: TrendingUp,
-    },
-  ]
-
-  return (
-    <div className="relative z-10 border-t border-[#d6b56d]/20 bg-black/65 py-6 backdrop-blur-md md:py-7">
-      <div className="mx-auto grid max-w-[1060px] grid-cols-1 gap-3 px-5 sm:grid-cols-2 md:grid-cols-4 md:px-8 lg:px-0">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon
-          return (
-            <div
-              key={stat.label}
-              className={`flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 ${
-                index < stats.length - 1 ? 'md:border-r-[#d6b56d]/20' : ''
-              }`}
-            >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#d6b56d]/40 bg-[#071a3d] shadow-lg">
-                <Icon className="h-5 w-5 text-[#e1bd70]" strokeWidth={2.2} />
-              </div>
-
-              <div>
-                <p className="text-2xl font-black leading-none text-white">
-                  {stat.value}
-                </p>
-
-                <p className="mt-1 text-xs leading-tight text-white/65">
-                  {stat.label}
-                </p>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 function PropertyDetailsModal({ property, onClose }) {
   const [selectedVariant, setSelectedVariant] = useState(property.variants?.[0] || property)
   const [agents, setAgents] = useState([])
@@ -1119,7 +748,6 @@ function PropertyDetailsModal({ property, onClose }) {
 
   useEffect(() => {
     let active = true
-    setLoadingAgents(true)
 
     propertyApi.assignedAgents(selectedVariant.id)
       .then((records) => {
@@ -1185,7 +813,10 @@ function PropertyDetailsModal({ property, onClose }) {
                     <button
                       key={variant.id}
                       type="button"
-                      onClick={() => setSelectedVariant(variant)}
+                      onClick={() => {
+                        setLoadingAgents(true)
+                        setSelectedVariant(variant)
+                      }}
                       className={`rounded-xl border px-4 py-2.5 text-sm font-bold transition ${
                         selectedVariant.id === variant.id
                           ? 'border-[#0d1b4c] bg-[#0d1b4c] text-white'
@@ -1363,3 +994,4 @@ function formatPrice(property) {
 }
 
 export default Hero
+

@@ -1,16 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
-  Bath,
-  BedDouble,
   Building2,
-  Car,
   Mail,
   MapPin,
   MessageCircle,
   Phone,
-  Ruler,
   Search,
   SlidersHorizontal,
   Plus,
@@ -359,9 +355,9 @@ function Properties() {
                 </button>
               )}
               <img
-                src="/zonal-realty-logo.png"
-                alt="Zonal Realty"
-                className="h-10 w-auto max-w-[150px] object-contain brightness-0 invert md:h-11 md:max-w-[170px]"
+                src="/webcraft-logo-transparent.png"
+                alt="Webcraft Labs"
+                className="h-12 w-[180px] object-contain object-left"
               />
             </div>
           </nav>
@@ -551,20 +547,6 @@ function getInitialPropertyForm() {
   return { title: '', location: '', type: '', priceFrom: '', priceTo: '', image: '', beds: '', baths: '', parking: '', floorArea: '', status: 'New Listing' }
 }
 
-function PropertyStat({ icon: Icon, label, value }) {
-  return (
-    <div className="flex min-h-[70px] flex-col items-center justify-center rounded-xl bg-[#f8fafc] px-1 py-2 text-center">
-      <Icon className="mx-auto h-3.5 w-3.5 text-[#111827]" />
-      <p className="mt-1.5 whitespace-nowrap text-[11px] font-black leading-tight text-[#111827]">
-        {value}
-      </p>
-      <p className="mt-1 text-[8px] font-bold uppercase leading-tight tracking-wide text-gray-400">
-        {label}
-      </p>
-    </div>
-  )
-}
-
 function InquiryModal({ project, onClose }) {
   const [property, setProperty] = useState(project.variants[0])
   const [assignedAgents, setAssignedAgents] = useState([])
@@ -572,7 +554,6 @@ function InquiryModal({ project, onClose }) {
 
   useEffect(() => {
     let active = true
-    setLoadingAgents(true)
 
     propertyApi.assignedAgents(property.id)
       .then((records) => {
@@ -637,7 +618,10 @@ function InquiryModal({ project, onClose }) {
                     <button
                       key={variant.id}
                       type="button"
-                      onClick={() => setProperty(variant)}
+                      onClick={() => {
+                        setLoadingAgents(true)
+                        setProperty(variant)
+                      }}
                       className={`rounded-xl border px-4 py-2.5 text-sm font-bold transition ${
                         property.id === variant.id
                           ? 'border-[#0d1b4c] bg-[#0d1b4c] text-white'
@@ -743,3 +727,4 @@ function formatPrice(property) {
 }
 
 export default Properties
+

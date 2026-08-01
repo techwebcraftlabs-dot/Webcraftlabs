@@ -415,7 +415,7 @@ useEffect(() => {
           />
 
           <TextField
-            label="Zonal Login Email"
+            label="Platform Login Email"
             value={formData.zonalEmail}
             readOnly
           />
@@ -499,7 +499,7 @@ useEffect(() => {
           />
 
           <TextField
-            label="Zonal Tax Rate (%)"
+            label="Platform Tax Rate (%)"
             name="zonalTaxRate"
             type="number"
             min="0"
@@ -632,8 +632,8 @@ useEffect(() => {
         <option value="All">All Status</option>
         <option value="Active">Active</option>
         <option value="For Approval">For Approval</option>
-        {isAdministrator && <option value="With Ayuda Loan">With Ayuda Loan</option>}
-        {isAdministrator && <option value="No Ayuda Loan">No Ayuda Loan</option>}
+        {isAdministrator && <option value="With Ayuda Loan">With Loan</option>}
+        {isAdministrator && <option value="No Ayuda Loan">No Loan</option>}
         </select>
         {(filters.search || filters.status !== 'All') && <button onClick={() => { resetFilters(); setPage(1); }} className="flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-600 hover:bg-slate-50"><FilterX size={17} /> Clear</button>}
       </div>
@@ -712,7 +712,7 @@ useEffect(() => {
             </div>
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button onClick={() => setCreatedCredentials(null)} className="rounded-xl border border-slate-200 px-5 py-3 font-bold text-slate-700">Done</button>
-              <button onClick={async () => { await navigator.clipboard.writeText(`Zonal Realty Login\nEmail: ${createdCredentials.email}\nTemporary Password: ${createdCredentials.temporaryPassword}`); toast('Login credentials copied.', 'success'); }} className="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white">Copy Credentials</button>
+              <button onClick={async () => { await navigator.clipboard.writeText(`Webcraft Labs Login\nEmail: ${createdCredentials.email}\nTemporary Password: ${createdCredentials.temporaryPassword}`); toast('Login credentials copied.', 'success'); }} className="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white">Copy Credentials</button>
               <button onClick={() => navigate(`/agents/${createdCredentials.agentId}`)} className="rounded-xl bg-[#0d1b4c] px-5 py-3 font-bold text-white">View Agent</button>
             </div>
           </div>
