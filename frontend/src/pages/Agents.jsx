@@ -60,7 +60,7 @@ function Agents() {
   const [savingAction, setSavingAction] = useState('');
   const [createdCredentials, setCreatedCredentials] = useState(null);
   useUnsavedChanges(showForm && isDirty);
-const generateZonalEmail = (
+const generateWebcraftEmail = (
   firstName,
   lastName
 ) => {
@@ -70,7 +70,7 @@ const generateZonalEmail = (
     .toLowerCase()
     .replace(/\s+/g, '')
     .replace(/[^a-z0-9.]/g, '') +
-    '@zonal.com';
+    '@webcraft.labs';
 };
   const [agents, setAgents] = useState([]);
   const [ayudaLoans, setAyudaLoans] = useState([]);
@@ -114,7 +114,7 @@ useEffect(() => {
     name === 'lastName'
   ) {
     updated.zonalEmail =
-      generateZonalEmail(
+      generateWebcraftEmail(
         name === 'firstName'
           ? value
           : updated.firstName,
