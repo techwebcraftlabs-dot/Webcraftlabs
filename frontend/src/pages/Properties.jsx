@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -25,7 +25,7 @@ const agents = [
     name: 'Sophia Miller',
     role: 'Buyer Specialist',
     phone: '+63 917 204 8831',
-    email: 'sophia@webcraft.labs',
+    email: 'sophia@zonalrealty.com',
     area: 'Makati, BGC',
     specialties: ['Condo', 'Penthouse'],
     locations: ['Makati City', 'BGC', 'Pasig City'],
@@ -42,7 +42,7 @@ const agents = [
     name: 'Michael Lee',
     role: 'Luxury Property Specialist',
     phone: '+63 918 447 1902',
-    email: 'michael@webcraft.labs',
+    email: 'michael@zonalrealty.com',
     area: 'Tagaytay, Batangas',
     specialties: ['Villa', 'House'],
     locations: ['Tagaytay City', 'Batangas', 'Cavite'],
@@ -59,7 +59,7 @@ const agents = [
     name: 'Olivia Cruz',
     role: 'Residential Consultant',
     phone: '+63 916 832 4410',
-    email: 'olivia@webcraft.labs',
+    email: 'olivia@zonalrealty.com',
     area: 'Rizal, Antipolo',
     specialties: ['Townhouse', 'House', 'Lot'],
     locations: ['Rizal', 'Antipolo', 'Laguna'],
@@ -76,7 +76,7 @@ const agents = [
     name: 'Mark Santos',
     role: 'Investment Advisor',
     phone: '+63 919 561 7302',
-    email: 'mark@webcraft.labs',
+    email: 'mark@zonalrealty.com',
     area: 'Nuvali, Alabang',
     specialties: ['House', 'Lot', 'Condo'],
     locations: ['Nuvali', 'Alabang', 'Laguna'],
@@ -93,7 +93,7 @@ const agents = [
     name: 'Daniel Reyes',
     role: 'Sales Director',
     phone: '+63 915 740 6621',
-    email: 'daniel@webcraft.labs',
+    email: 'daniel@zonalrealty.com',
     area: 'South Luzon',
     specialties: ['House', 'Villa', 'Townhouse'],
     locations: ['Cavite', 'Laguna', 'Alabang', 'Batangas'],
@@ -355,9 +355,9 @@ function Properties() {
                 </button>
               )}
               <img
-                src="/webcraft-logo-transparent.png"
-                alt="Webcraft Labs"
-                className="h-12 w-[180px] object-contain object-left"
+                src="/zonal-realty-logo.png"
+                alt="Zonal Realty"
+                className="h-10 w-auto max-w-[150px] object-contain brightness-0 invert md:h-11 md:max-w-[170px]"
               />
             </div>
           </nav>
@@ -727,4 +727,3 @@ function formatPrice(property) {
 }
 
 export default Properties
-

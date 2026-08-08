@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -355,9 +355,9 @@ function Properties() {
                 </button>
               )}
               <img
-                src="/webcraft-logo-transparent.png"
-                alt="Webcraft Labs"
-                className="h-12 w-[180px] object-contain object-left"
+                src="/zonal-realty-logo.png"
+                alt="Zonal Realty"
+                className="h-10 w-auto max-w-[150px] object-contain brightness-0 invert md:h-11 md:max-w-[170px]"
               />
             </div>
           </nav>
@@ -727,4 +727,3 @@ function formatPrice(property) {
 }
 
 export default Properties
-

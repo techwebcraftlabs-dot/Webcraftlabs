@@ -77,14 +77,14 @@ function StatsCards({ filters, onFiltersChange }) {
         {stats.map((item) => {
           const Icon = item.icon
           return (
-            <div key={item.title} className="dashboard-stat-card group relative overflow-hidden rounded-2xl border border-[#ded8cd] bg-[#fffdf9] p-4 shadow-[0_10px_28px_rgba(27,29,31,0.05)] transition duration-300 before:absolute before:inset-x-0 before:top-0 before:h-[2px] before:bg-gradient-to-r before:from-[#8b6226] before:via-[#d1a14d] before:to-transparent hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(27,29,31,0.09)] sm:p-5">
+            <div key={item.title} className="dashboard-stat-card group relative overflow-hidden rounded-2xl border border-[#e5dfd2] bg-[#fffefd] p-4 shadow-[0_10px_28px_rgba(7,26,61,0.055)] transition duration-300 before:absolute before:inset-x-0 before:top-0 before:h-[2px] before:bg-gradient-to-r before:from-[#c9a96e] before:via-[#1f5eff] before:to-transparent hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(7,26,61,0.09)] sm:p-5">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="stat-label text-xs font-semibold text-[#6b6a66]">{item.title}</p>
-                  <h2 className="stat-value mt-2 break-words text-2xl font-black tracking-tight text-[#202225] sm:text-[28px]">{item.value}</h2>
-                  <p className="stat-note mt-2 truncate text-[11px] font-medium text-[#8a8882]">{item.note}</p>
+                  <p className="stat-label text-xs font-semibold text-[#617089]">{item.title}</p>
+                  <h2 className="stat-value mt-2 break-words text-2xl font-black tracking-tight text-[#071a3d] sm:text-[28px]">{item.value}</h2>
+                  <p className="stat-note mt-2 truncate text-[11px] font-medium text-[#8490a2]">{item.note}</p>
                 </div>
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#d1a14d] bg-[#1b1d1f] text-[#e0b45f] shadow-[0_8px_18px_rgba(27,29,31,0.14)] transition group-hover:scale-105"><Icon size={20} /></div>
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#d9bd82] bg-[#071a3d] text-white shadow-[0_8px_18px_rgba(7,26,61,0.14)] transition group-hover:scale-105"><Icon size={20} /></div>
               </div>
             </div>
           )

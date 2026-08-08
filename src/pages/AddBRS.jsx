@@ -48,8 +48,8 @@ const initialRateDistribution = [
   { role: "Sales Director", name: "", rate: "" },
   { role: "Assistant HLC 1", name: "", rate: "" },
   { role: "Assistant HLC 2", name: "", rate: "" },
-  { role: "Broker Partner", name: "Alex Morgan", rate: "" },
-  { role: "Platform Partner", name: "Jordan Lee", rate: "" },
+  { role: "JBA", name: "JBA", rate: "" },
+  { role: "ZONAL", name: "ZONAL", rate: "" },
   { role: "Local SD", name: "", rate: "" },
   { role: "Recruiter", name: "", rate: "" },
   { role: "Coordinator", name: "", rate: "" },
@@ -283,7 +283,7 @@ function AddBRS() {
           .map((row) => ({
             ...row,
             rate: Number(row.rate) || 0,
-            taxable: !["developer", "platform partner", "zonal"].includes(
+            taxable: !["developer", "zonal"].includes(
               row.role.toLowerCase()
             ),
         })),
@@ -948,7 +948,7 @@ function RateDistributionField({
   const isDeveloperRate =
     row.role.toLowerCase() === "developer";
   const hasLockedName =
-    ["broker partner", "platform partner", "jba", "zonal"].includes(row.role.toLowerCase());
+    ["jba", "zonal"].includes(row.role.toLowerCase());
   const label = isDeveloperRate
     ? "Developer's Rate"
     : row.role;

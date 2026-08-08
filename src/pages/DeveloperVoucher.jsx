@@ -513,9 +513,9 @@ function VoucherDetailsModal({ voucher, computations, onClose }) {
                       <th className="p-3 text-left">Savings</th>
                       <th className="p-3 text-left">CA</th>
                       <th className="p-3 text-left">Marketing</th>
-                      <th className="p-3 text-left">Loan</th>
+                      <th className="p-3 text-left">Ayuda</th>
                       <th className="p-3 text-left">Others</th>
-                      <th className="p-3 text-left">Member Care</th>
+                      <th className="p-3 text-left">Zonal Care</th>
                       <th className="p-3 text-left">Tax</th>
                       <th className="p-3 text-left">Net Amount</th>
                     </tr>

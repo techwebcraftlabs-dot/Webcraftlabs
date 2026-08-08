@@ -22,6 +22,7 @@ export const agentFields = [
   "team",
   "subTeam",
   "zonalTaxRate",
+  "passOnVat",
   "status",
 ];
 
@@ -50,6 +51,7 @@ export const agentSelect = `
   team,
   sub_team AS subTeam,
   zonal_tax_rate AS zonalTaxRate,
+  pass_on_vat AS passOnVat,
   status,
   password_changed_at AS passwordChangedAt,
   password_reset_required AS passwordResetRequired,
@@ -81,13 +83,18 @@ export const agentColumnMap = {
   team: "team",
   subTeam: "sub_team",
   zonalTaxRate: "zonal_tax_rate",
+  passOnVat: "pass_on_vat",
   status: "status",
 };
+
+function parseBoolean(value) {
+  return value === true || value === 1 || value === "1" || value === "true" || value === "yes" || value === "on";
+}
 
 export function pickAgentPayload(body) {
   return Object.fromEntries(
     agentFields
       .filter((field) => Object.hasOwn(body, field))
-      .map((field) => [field, body[field] || null])
+      .map((field) => [field, field === "passOnVat" ? parseBoolean(body[field]) : body[field] || null])
   );
 }

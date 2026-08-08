@@ -88,7 +88,7 @@ function RateDistribution() {
 
     const role = normalizeRole(person);
 
-    if (["broker partner", "platform partner", "evp", "jba", "zonal"].includes(role)) {
+    if (role === "jba" || role === "evp" || role === "zonal") {
       return "broker";
     }
 
@@ -125,8 +125,8 @@ function RateDistribution() {
   const getAgentTaxRate = (person) => {
     const personName = normalizePersonName(person.name);
     const personRole = normalizeRole(person);
-    if (["jordan lee", "zonal"].includes(personName) || ["platform partner", "zonal"].includes(personRole)) return 0;
-    if (["alex morgan", "jba"].includes(personName) || ["broker partner", "jba"].includes(personRole)) return 5;
+    if (personName === "zonal" || personRole === "zonal") return 0;
+    if (personName === "jba" || personRole === "jba") return 5;
     if (!person.taxable) return 0;
     const matchedAgent = agentTaxRates.find((agent) =>
       [agent.fullName, agent.simpleName]
@@ -135,6 +135,19 @@ function RateDistribution() {
     );
     const rate = matchedAgent?.zonalTaxRate ?? person.taxRate ?? 5;
     return Math.min(100, Math.max(0, Number(rate) || 0));
+  };
+
+  const isPassOnVat = (value) =>
+    value === true || value === 1 || value === "1" || value === "true" || value === "yes";
+
+  const getPassOnVat = (person) => {
+    const personName = normalizePersonName(person.name);
+    const matchedAgent = agentTaxRates.find((agent) =>
+      [agent.fullName, agent.simpleName]
+        .map(normalizePersonName)
+        .includes(personName)
+    );
+    return isPassOnVat(matchedAgent?.passOnVat ?? person.passOnVat);
   };
 
   const incentiveDeveloperRate = combinedDistributionData.reduce(
@@ -284,20 +297,24 @@ function RateDistribution() {
     const rowKey = getRowKey(person, index);
     const rate = Number(person.rate) || 0;
     const forRelease = developerRate ? netOfVat * (rate / developerRate) : 0;
+    const passOnVat = getPassOnVat(person);
+    const vatReturn = passOnVat && developerRate ? vatDeduction * (rate / developerRate) : 0;
     const opx =
-      forRelease >= 200 && rate >= 1 && !["jordan lee", "zonal"].includes(normalizePersonName(person.name)) ? 50 : 0;
+      forRelease >= 200 && rate >= 1 && normalizePersonName(person.name) !== "zonal" ? 50 : 0;
     const taxRate = getAgentTaxRate(person);
     const taxAmount = forRelease * (taxRate / 100);
     const savedDeductions = getDeductions(rowKey);
     const deductions = { ...savedDeductions, ayuda: savedDeductions.ayuda === undefined ? "" : savedDeductions.ayuda };
     const deductionTotal = deductionFields.reduce((total, field) => total + (Number(deductions[field]) || 0), 0);
-    const netAmount = forRelease - opx - taxAmount - deductionTotal;
+    const netAmount = forRelease + vatReturn - opx - taxAmount - deductionTotal;
 
     return {
       rowKey,
       person,
       rate,
       forRelease,
+      passOnVat,
+      vatReturn,
       opx,
       taxRate,
       taxAmount,
@@ -315,6 +332,7 @@ function RateDistribution() {
     (total, row) => total + row.taxAmount,
     0
   );
+  const totalVatReturn = computedRows.reduce((total, row) => total + row.vatReturn, 0);
   const totalNet = computedRows.reduce(
     (total, row) => total + row.netAmount,
     0
@@ -353,6 +371,7 @@ function RateDistribution() {
           forRelease: totalForRelease,
           opx: totalOpx,
           tax: totalTax,
+          vatReturn: totalVatReturn,
           net: totalNet,
         },
         rows: computedRows.map((row) => ({
@@ -364,6 +383,8 @@ function RateDistribution() {
           netOfVat,
           rate: row.rate,
           forRelease: row.forRelease,
+          passOnVat: row.passOnVat,
+          vatReturn: row.vatReturn,
           opx: row.opx,
           deductions: {
             savings: Number(row.deductions.savings) || 0,
@@ -584,7 +605,7 @@ function RateDistribution() {
 
   return (
     <section className="min-h-screen bg-[#f4f6fb] p-6 lg:p-8">
-      <div className="mb-6 overflow-hidden rounded-[24px] border border-[#313335] bg-gradient-to-br from-[#191b1d] via-[#25282b] to-[#40382c] p-6 text-white shadow-[0_22px_55px_rgba(27,29,31,0.18)] lg:p-8">
+      <div className="mb-6 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#0b1745] via-[#10265f] to-[#1d4ed8] p-6 text-white shadow-[0_22px_55px_rgba(15,35,95,0.22)] lg:p-8">
         <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between"><div>
           {batchBuyers.length > 0 && (
             <button
@@ -685,13 +706,14 @@ function RateDistribution() {
               <th className="p-4 text-left">Net of VAT</th>
               <th className="p-4 text-left">HLC Rate</th>
               <th className="p-4 text-left">For Release</th>
+              <th className="p-4 text-left">VAT Return</th>
               <th className="p-4 text-left">OPX</th>
               <th className="p-4 text-left">Savings</th>
               <th className="p-4 text-left">CA</th>
               <th className="p-4 text-left">Marketing</th>
-              <th className="p-4 text-left">Loan</th>
+              <th className="p-4 text-left">Ayuda</th>
               <th className="p-4 text-left">Others</th>
-              <th className="p-4 text-left">Member Care</th>
+              <th className="p-4 text-left">Zonal Care</th>
               <th className="p-4 text-left">Tax Rate</th>
               <th className="p-4 text-left">Tax Amount</th>
               <th className="p-4 text-left">Net Amount</th>
@@ -701,7 +723,7 @@ function RateDistribution() {
           <tbody>
             {computedRows.length === 0 && (
               <tr>
-                <td colSpan="17" className="p-8 text-center text-gray-500">
+                <td colSpan="18" className="p-8 text-center text-gray-500">
                   No rate distribution found for this incentive type.
                 </td>
               </tr>
@@ -724,6 +746,9 @@ function RateDistribution() {
                 <td className="p-4">{row.rate}%</td>
                 <td className="p-4 font-bold text-blue-600">
                   {formatCurrency(row.forRelease)}
+                </td>
+                <td className="p-4 font-semibold text-emerald-600">
+                  {row.passOnVat ? formatCurrency(row.vatReturn) : "-"}
                 </td>
                 <td className="p-4 font-semibold text-orange-500">
                   {row.opx > 0 ? formatCurrency(row.opx) : "-"}
@@ -770,6 +795,9 @@ function RateDistribution() {
               <td></td>
               <td className="p-4 text-blue-600">
                 {formatCurrency(totalForRelease)}
+              </td>
+              <td className="p-4 text-emerald-600">
+                {formatCurrency(totalVatReturn)}
               </td>
               <td className="p-4 text-orange-500">
                 {formatCurrency(totalOpx)}

@@ -46,7 +46,7 @@ function Topbar() {
   }
 
   return (
-    <div className="relative mb-5 flex min-h-[180px] flex-col justify-between gap-5 overflow-visible rounded-[22px] border border-[#313335] bg-[linear-gradient(120deg,#191b1d_0%,#25282b_62%,#34312b_100%)] px-5 py-5 text-white shadow-[0_18px_44px_rgba(27,29,31,0.16)] sm:min-h-[160px] sm:flex-row sm:items-center md:px-7 lg:min-h-[176px] lg:px-8">
+    <div className="relative mb-5 flex min-h-[180px] flex-col justify-between gap-5 overflow-visible rounded-[26px] border border-[#173764] bg-[linear-gradient(120deg,#071a3d_0%,#0a2d68_58%,#123f91_100%)] px-5 py-5 text-white shadow-[0_18px_44px_rgba(7,26,61,0.18)] sm:min-h-[160px] sm:flex-row sm:items-center md:px-7 lg:min-h-[176px] lg:px-8">
       <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-[48%] overflow-hidden opacity-25 md:block">
         <div className="absolute -right-16 top-8 h-44 w-72 rotate-[-12deg] border border-[#d6b56d]" />
         <div className="absolute right-12 top-16 h-36 w-64 rotate-[-12deg] border border-[#d6b56d]" />
@@ -76,7 +76,7 @@ function Topbar() {
             max-w-xl
             text-xs
             sm:text-sm
-            text-white/65
+            text-blue-100/80
             mt-1
             lg:mt-2
           "
@@ -167,7 +167,7 @@ function Topbar() {
           <p
             className="
               text-xs
-              text-white/60
+              text-blue-100/70
             "
           >
             {role}
@@ -189,7 +189,7 @@ function Topbar() {
             text-lg
             shadow-[0_12px_24px_rgba(59,40,31,0.22)]
             border-2 border-[#d6b56d]/70
-            ${agentId ? 'bg-[#9a6c26]' : 'bg-white'}
+            ${agentId ? 'bg-[#0d1b4c]' : 'bg-white'}
           `}
         >
           {agentId ? (
@@ -204,8 +204,8 @@ function Topbar() {
             </>
           ) : (
             <img
-              src="/webcraft-logo-transparent.png"
-              alt="Webcraft Labs logo"
+              src="/zonal-icon-transparent.png"
+              alt="Zonal Realty logo"
               className="h-9 w-9 object-contain"
             />
           )}

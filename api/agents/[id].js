@@ -11,6 +11,7 @@ export default async function handler(req, res) {
   try {
     const session = await requireSession(req, { selfId: id });
     await ensureColumn("agents", "zonal_tax_rate", "DECIMAL(5, 2) NOT NULL DEFAULT 5.00");
+    await ensureColumn("agents", "pass_on_vat", "TINYINT(1) NOT NULL DEFAULT 0 AFTER zonal_tax_rate");
     await ensureColumn("agents", "bdo_account_number", "VARCHAR(100) NULL AFTER mobile_number");
     if (req.method === "GET") {
       const rows = await query(

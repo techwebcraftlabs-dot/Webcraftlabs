@@ -6,7 +6,7 @@ import { brsApi, voucherApi } from "../lib/api";
 
 const protectedRateRoles = new Set([
   "developer", "hlc", "sales director", "assistant hlc 1", "assistant hlc 2",
-  "broker partner", "platform partner", "jba", "zonal", "local sd", "recruiter", "coordinator", "ads/scholar",
+  "jba", "zonal", "local sd", "recruiter", "coordinator", "ads/scholar",
   "evp", "documentation hlc", "referral", "referral 2",
 ]);
 
